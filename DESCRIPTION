@@ -1,0 +1,14 @@
+Package: rnaseqdea
+Title: RNA-Seq Differential Expression Analysis (rnaseqdea)
+Version: 0.1.0
+Authors@R: 
+    person("Wanchang", "Lin", , "wanchanglin@hotmail.com", role = c("aut", "cre"),
+           comment = c(ORCID = "YOUR-ORCID-ID"))
+Description: functions for RNA-Seq differential experssion analysisI,
+including: wrapper function to different statistical models, normalisation
+methods, plotting and classification.  
+License: `use_mit_license()`
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.2
