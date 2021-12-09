@@ -1,14 +1,23 @@
 Package: rnaseqdea
 Title: RNA-Seq Differential Expression Analysis (rnaseqdea)
+Date: 2021-12-09
+Type: Package
 Version: 0.1.0
 Authors@R: 
-    person("Wanchang", "Lin", , "wanchanglin@hotmail.com", role = c("aut", "cre"),
+    person("Wanchang", "Lin", , "wanchanglin@hotmail.com", 
+           role = c("aut", "cre"),
            comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: functions for RNA-Seq differential experssion analysisI,
-including: wrapper function to different statistical models, normalisation
-methods, plotting and classification.  
+Description: 
+  Functions for RNA-Seq differential experssion analysis, including: wrapper
+  function to different statistical models, normalisation methods, plotting
+  and classification.  
 License: `use_mit_license()`
+URL: https://github.com/wanchanglin/rnaseqdea
+BugReports: https://github.com/wanchanglin/rnaseqdea/issues
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
+Depends: R (>= 3.0.0)
+Imports: rlang, reshape2, plyr, MASS, lattice, latticeExtra, ellipse,
+  DESeq2, DESeq, edgeR, NBPSeq, EBSeq, NOISeq, samr
