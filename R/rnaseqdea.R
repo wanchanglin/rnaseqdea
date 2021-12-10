@@ -14,6 +14,9 @@
 #' @param norm.method normalisation method
 #' @return a list of objects
 #' @export 
+#' @importFrom lattice xyplot panel.xyplot panel.grid panel.abline histogram
+#'   bwplot 
+#' @importFrom mt panel.elli pca.comp
 ## wll-14-08-2014: NGS count data analysis.
 ## wll-15-08-2014: Return all plots individually.
 ## wll-17-08-2014: Re-write boxplot
@@ -22,12 +25,10 @@ ngs <- function(data, cls, com, method = "stats.TSPM", norm.method = "TMM") {
   method <-
     match.arg(
       method,
-      c(
-        "stats.DESeq", "stats.DESeq2", "stats.edgeR", "stats.TSPM",
-        "stats.NBPSeq", "stats.EBSeq", "stats.Wilcox", "stats.NOISeq",
-        "stats.SAMseq"
-      )
-    )
+      c("stats.edgeR", "stats.DESeq2", "stats.NOISeq", "stats.NBPSeq",
+        "stats.EBSeq", "stats.SAMseq",  "stats.voom", "stats.Wilcox",  
+        "stats.TSPM"))
+    
   tit <- paste(com, collapse = "~") ## plot title
 
   res <- do.call(method, list(data, cls, com, norm.method))
@@ -171,6 +172,7 @@ ngs <- function(data, cls, com, method = "stats.TSPM", norm.method = "TMM") {
 #' @param method data centre function
 #' @return a list including stats summary and normalised data set
 #' @export  
+#' @importFrom mt stats.mat
 ## wll-17-12-2014: Wrapper function of group stats for normalised NGS data.
 ## Also the normalised data is returned.
 ngs.stats <- function(mat, grp, nf, method = "mean") {
@@ -197,14 +199,14 @@ ngs.stats <- function(mat, grp, nf, method = "mean") {
 #' @param method classification methods. Only support `randomForest` and `svm`
 #' @param pars sampling setting for classification
 #' @return a list with components of plots and classification results
+#' @importFrom mt pca.plot.wrap pls.plot.wrap aam.mcl valipars 
+#' @importFrom lattice dotplot
 #' @export 
 ## wll-03-12-2014: Assess feature selection of NGS: PCA plot, PLS plot and
 ##  classification.
 ngs.cl <- function(dat.list, DF, method = c("randomForest", "svm"),
-                   pars = valipars(
-                     sampling = "cv", niter = 20, nreps = 5,
-                     strat = TRUE
-                   )) {
+                   pars = valipars(sampling = "cv", niter = 20, nreps = 5,
+                                   strat = TRUE)) {
 
   ## PCA and PLS plot
   pca <- pca.plot.wrap(dat.list,
@@ -216,17 +218,8 @@ ngs.cl <- function(dat.list, DF, method = c("randomForest", "svm"),
     scales = list(cex = 0.75, relation = "same", x = list(draw = T))
   )
 
-  ## pdf(file = paste(PRE, tr, "pca_pls_plots.pdf", sep="_"), onefile = T)
-  ## plot(pca[[1]])
-  ## plot(pls[[1]])
-  ## dev.off()
-
   ## Classification
   dn <- names(dat.list)
-  ## pars <- valipars(sampling = "cv",niter = 20, nreps=5, strat=TRUE)
-  ## pars <- valipars(sampling="boot",niter=1,nreps=100, strat=T)
-  ## pars <- valipars(sampling="loocv")
-  ## method  <- c("randomForest","svm")##,"pcalda")
   aam <- lapply(dn, function(i) {
     cat("\n--data = :", i)
     flush.console()
@@ -234,19 +227,10 @@ ngs.cl <- function(dat.list, DF, method = c("randomForest", "svm"),
   })
   names(aam) <- dn
 
-  ## save(aam, method, pars, file=paste(PRE,"cl.RData",sep="_"))
-  ## save acc, auc and margin of classification
-  ## filename  <- paste(PRE, "aam.csv", sep='_')
-  ## firstline <- paste('\nACC, AUC and Margin of classification', sep='')
-  ## save.tab(aam, filename, firstline)
-
   ## plot the aam results
   z <- melt(aam)
   z <- z[complete.cases(z), ] ## in case NAs
   names(z) <- c("classifier", "assessment", "value", "data")
-  ## Want to remove results of pcalda?
-  ## z <- subset(z, assessment!="mar")
-  ## z$assessment <- factor(z$assessment)
 
   aam.p <- dotplot(factor(data, levels = rev(unique.default(data))) ~ value | assessment,
     data = z, groups = classifier, as.table = T, layout = c(length(unique(z$assessment)), 1),
@@ -260,9 +244,6 @@ ngs.cl <- function(dat.list, DF, method = c("randomForest", "svm"),
     xlab = "", main = paste(DF, " Classification with resampling", sep = ":")
   )
   aam.p
-  ## update(aam.p_fs, scale=list(x="free"),between = list(x = c(0.5, 0.5, 0), y = 0))
-  ## update(aam.p_fs, scales=list(cex =.6))
-  ## savePlot(filename = paste(PRE,"aam_plot", sep="_"), type = "emf")
 
   list(pca = pca, pls = pls, aam = aam, aam.p = aam.p)
 }
@@ -276,6 +257,8 @@ ngs.cl <- function(dat.list, DF, method = c("randomForest", "svm"),
 #' @param method differential analysis method
 #' @param norm.data a logical indicating whether normalise data or not
 #' @return a list with normalisation factor and normalised data
+#' @importFrom DESeq2 estimateSizeFactorsForMatrix
+#' @importFrom edgeR calcNormFactors
 #' @export 
 #' 
 ## wll-14-08-2014: Get normalisation factors
@@ -297,21 +280,21 @@ ngs.cl <- function(dat.list, DF, method = c("randomForest", "svm"),
 ##   calculated from the 75% quantile of the counts for each library, after
 ##   removing genes which are zero in all libraries. This idea is
 ##   generalized here to allow scaling by any quantile of the distributions.
+## wl-10-12-2021, Fri: use DESeq2
 norm.factor <- function(data, method = c("DESeq", "TMM", "RLE", "UQ", "none"),
                         norm.data = FALSE) {
   data <- as.data.frame(data)
   method <- match.arg(method)
   nf <-
     switch(method,
-      "DESeq" = DESeq::estimateSizeFactorsForMatrix(data), ## from DESeq
-      "TMM"   = calcNormFactors(data, method = "TMM"), ## from edgeR
-      "RLE"   = calcNormFactors(data, method = "RLE"), ## from edgeR
-      "UQ"    = calcNormFactors(data, method = "upperquartile"), ## from edgeR
+      "DESeq" = DESeq2::estimateSizeFactorsForMatrix(data),
+      "TMM"   = edgeR::calcNormFactors(data, method = "TMM"),
+      "RLE"   = edgeR::calcNormFactors(data, method = "RLE"),
+      "UQ"    = edgeR::calcNormFactors(data, method = "upperquartile"),
       "none"  = rep(1, ncol(data))
     )
   names(nf) <- colnames(data)
 
-  ## -----------------------------------------------------------------------
   ## Normalise data
   ## nf <- nf * (1e-6*colSums(mat))  #' edgeR style otherwise DESeq style
   data <- t(t(data) / nf)
@@ -335,6 +318,7 @@ norm.factor <- function(data, method = c("DESeq", "TMM", "RLE", "UQ", "none"),
 #' @param method two normalisation method `vst` and `rst`
 #' @param ... further parameters to `vst` and `rlt`
 #' @return normalised data
+#' @importFrom DESeq2 varianceStabilizingTransformation rlog
 #' @export 
 #'  
 ## wll-01-12-2014: Transform count data by  two methods:
@@ -380,7 +364,8 @@ NULL
 #' @export  
 #' @rdname stats
 #' @order 1
-#' 
+#' @importFrom edgeR DGEList estimateCommonDisp estimateTagwiseDisp exactTest
+#' @importFrom mt pval.reject
 ## wll-13-08-2014: Wrapper function for edgeR
 ## wll-06-01-2015: minor changes
 ## Note: mat is [gene x replicate]
@@ -404,16 +389,16 @@ stats.edgeR <- function(data, cls, com, norm.method = "TMM") {
 
   ## ------------------------------------------------------------------------
   ## Prepare data for edgeR
-  dge <- DGEList(counts = mat, group = grp)
+  dge <- edgeR::DGEList(counts = mat, group = grp)
   dge$samples$norm.factors <- nf ## user-defined normalisation factor
   ## dge <- calcNormFactors(dge)
 
-  dge <- estimateCommonDisp(dge)
-  dge <- estimateTagwiseDisp(dge)
+  dge <- edgeR::estimateCommonDisp(dge)
+  dge <- edgeR::estimateTagwiseDisp(dge)
 
   ## ------------------------------------------------------------------------
   ## wl-27-07-2019, Sat: check 'glmLRT'
-  res <- exactTest(dge) ## default: pair=1:2
+  res <- edgeR::exactTest(dge) ## default: pair=1:2
   tab <- res$table
   names(tab)[3] <- "pval"
 
@@ -465,79 +450,8 @@ stats.edgeR <- function(data, cls, com, norm.method = "TMM") {
 #' @export  
 #' @rdname stats
 #' @order 2
-#' 
-## wll-13-08-2014: data analysis using DESeq
-## wll-06-01-2015: minor changes
-## wll-04-04-2017: add DESeq:: to avoid conflict with DESeq2
-## Note: mat is [gene x replicate]
-stats.DESeq <- function(data, cls, com, norm.method = "TMM") {
-  ## -----------------------------------------------------------------------
-  ## Get normalisation factors
-  norm.method <- match.arg(norm.method, c("DESeq", "TMM", "RLE", "UQ", "none"))
-  fac <- norm.factor(data, method = norm.method)
-
-  ## -----------------------------------------------------------------------
-  ## Construct binary comparison info
-  tmp <- paste(com, collapse = "|")
-  ind <- grepl(tmp, cls)
-  mat <- data[, ind, drop = FALSE]
-  nf <- fac[ind]
-  grp <- cls[ind, drop = TRUE]
-
-  ## --------------------------------------------------------------------
-  ## Prepare data for DESeq
-  cds <- DESeq::newCountDataSet(mat, grp)
-  sizeFactors(cds) <- nf ## user-defined norm factor
-  ## cds <- DESeq::estimateSizeFactors(cds)
-  cds <- DESeq::estimateDispersions(cds, fitType = c("local"))
-  ## default method is "pooled"
-
-  ## Call DESeq
-  res <- DESeq::nbinomTest(cds, condA = levels(grp)[1], condB = levels(grp)[2])
-
-  ## --------------------------------------------------------------------
-  ## get group stats and transposed-normalised data
-  tmp <- ngs.stats(mat, grp, nf, method = "mean")
-  stats <- tmp$stats
-  ## transposed and normalised data
-  mat <- tmp$mat
-
-  ## ---------------------------------------------------------------------
-  ## Get p-values, adjusted p-values and filtered-adjusted p-values.
-  pval <- res$pval
-  padj <- res$padj
-  ## get the adjusted p-values with filtering
-  names(pval) <- colnames(mat) ## will pass names of p-values
-  padjf <- p.adj.f(pval, filter.stat = stats$mean, alpha = 0.1, method = "BH")
-  padj.f <- padjf$padj.f
-
-  ## update results
-  res$padj.f <- padj.f
-
-  ## ------------------------------------------------------------------
-  pval.adj <- cbind(pval = pval, padj = padj, padj.f = padj.f)
-  pval.adj <- data.frame(pval.adj)
-  rownames(pval.adj) <- colnames(mat)
-
-  ## get reject number
-  tmp <- pval.adj[order(pval.adj[, 1], na.last = T), ]
-  rej.num <- pval.reject(tmp, alpha = c(0.01, 0.05, 0.1))
-
-  ## merge adjusted p-values
-  stats <- cbind(stats, res)
-
-  ## order based on pval
-  stats <- stats[order(stats$pval), ]
-
-  res <- list(stats = stats, rej.num = rej.num, data = mat, cls = grp, padjf = padjf)
-  return(res)
-}
-
-## ------------------------------------------------------------------------
-#' @export  
-#' @rdname stats
-#' @order 3
-#' 
+#' @importFrom DESeq2 DESeqDataSetFromMatrix estimateDispersions 
+#'   nbinomWaldTest results sizeFactors<-
 ## wll-19-11-2014: data analysis using DESeq2
 ## wll-17-12-2014: add adjusted p-values with filtering
 ## wll-04-04-2017: add DESeq2:: in front of its functions.
@@ -576,7 +490,7 @@ stats.DESeq2 <- function(data, cls, com, norm.method = "TMM") {
   ## You can use the wrapper function
   ## dds <- DESeq(dds)
 
-  res <- results(dds) ## it is DataFRame class in package S4Vectos
+  res <- DESeq2::results(dds) ## it is DataFRame class in package S4Vectos
   res <- as.data.frame(res)
 
   ## change column name
@@ -622,8 +536,8 @@ stats.DESeq2 <- function(data, cls, com, norm.method = "TMM") {
 ## ------------------------------------------------------------------------
 #' @export  
 #' @rdname stats
-#' @order 4
-#' 
+#' @order 3
+#' @importFrom NOISeq readData noiseqbio
 ## wll-15-09-2014: Wrapper function for NOISeq
 ## wll-17-12-2014: add adjusted p-values with filtering
 ## Note: adjusted p-values with filtering may be not reasonable
@@ -652,14 +566,15 @@ stats.NOISeq <- function(data, cls, com, norm.method = "TMM") {
   fact <- as.data.frame(grp)
   rownames(fact) <- rownames(mat)
 
-  dat <- readData(data = t(mat), factors = fact)
+  dat <- NOISeq::readData(data = t(mat), factors = fact)
   ## slotNames(dat)
   ## pData(dat)
   ## head(assayData(dat)$exprs)
 
   ## Call NOISeq. No normalisation and filtering. Beware that do not use
   ##  noiseq since the probability cannot be convert to FDR.
-  res <- noiseqbio(dat, norm = "n", factor = "grp", filter = 0, k = 0.0)
+  res <- NOISeq::noiseqbio(dat, norm = "n", factor = "grp", filter = 0,
+                           k = 0.0)
   tab <- res@results[[1]]
   tab$pval <- 1 - tab$prob
   tab$padj <- 1 - tab$prob
@@ -694,18 +609,16 @@ stats.NOISeq <- function(data, cls, com, norm.method = "TMM") {
 ## ------------------------------------------------------------------------
 #' @export  
 #' @rdname stats
-#' @order 5
-#' 
+#' @order 4
+#' @importFrom NBPSeq nbp.test 
 ## wll-02-09-2014: data analysis using NBPSeq
 ## wll-06-01-2015: minor changes
 ## Note: mat is [gene x replicate]
 stats.NBPSeq <- function(data, cls, com, norm.method = "TMM") {
-  ## -----------------------------------------------------------------------
   ## Get normalisation factors
   norm.method <- match.arg(norm.method, c("DESeq", "TMM", "RLE", "UQ", "none"))
   fac <- norm.factor(data, method = norm.method)
 
-  ## -----------------------------------------------------------------------
   ## Construct binary comparison info
   tmp <- paste(com, collapse = "|")
   ind <- grepl(tmp, cls)
@@ -713,9 +626,8 @@ stats.NBPSeq <- function(data, cls, com, norm.method = "TMM") {
   nf <- fac[ind]
   grp <- cls[ind, drop = TRUE]
 
-  ## --------------------------------------------------------------------
-  ## Call NBPSeq
-  res <- nbp.test(as.matrix(mat), grp,
+  ## Call NOISeq
+  res <- NBPSeq::nbp.test(as.matrix(mat), grp,
     grp1 = levels(grp)[1], grp2 = levels(grp)[2],
     norm.factors = nf
   )
@@ -762,8 +674,8 @@ stats.NBPSeq <- function(data, cls, com, norm.method = "TMM") {
 ## ------------------------------------------------------------------------
 #' @export  
 #' @rdname stats
-#' @order 6
-#' 
+#' @order 5
+#' @importFrom EBSeq EBTest GetPPMat
 ## wll-03-09-2014: data analysis using EBSeq
 ##   Original author's claim: In EBSeq 1.3.3, the default setting of EBTest
 ##   function will remove low expressed genes (genes whose 75th quantile of
@@ -776,12 +688,10 @@ stats.NBPSeq <- function(data, cls, com, norm.method = "TMM") {
 ##   calling the differential analysis function
 ## wll-06-01-2015: minor changes. padj.f may not be reasonable.
 stats.EBSeq <- function(data, cls, com, norm.method = "TMM") {
-  ## -----------------------------------------------------------------------
   ## Get normalisation factors
   norm.method <- match.arg(norm.method, c("DESeq", "TMM", "RLE", "UQ", "none"))
   fac <- norm.factor(data, method = norm.method)
 
-  ## -----------------------------------------------------------------------
   ## Construct binary comparison info
   tmp <- paste(com, collapse = "|")
   ind <- grepl(tmp, cls)
@@ -789,16 +699,15 @@ stats.EBSeq <- function(data, cls, com, norm.method = "TMM") {
   nf <- fac[ind]
   grp <- cls[ind, drop = TRUE]
 
-  ## --------------------------------------------------------------------
   ## Call EBSeq
-  res <- EBTest(
+  res <- EBSeq::EBTest(
     Data = as.matrix(mat), Conditions = grp, sizeFactors = nf, maxround = 5,
     QtrmCut = -1
   )
   ## Note: 1.) Data must be matrix
   ##       2.) Do NOT filter genes by quantile, so QtrmCut=-1. The filtering
   ##           should be done outside this function.
-  pp <- GetPPMat(res)
+  pp <- EBSeq::GetPPMat(res)
   ppde <- 1 - pp[, "PPDE"] ## Is this FDR?
 
   ## Get FDR. Modified from R scripts of A comparison of methods for differential
@@ -808,14 +717,12 @@ stats.EBSeq <- function(data, cls, com, norm.method = "TMM") {
     mean(ppde[which(ppde <= x)])
   })
 
-  ## --------------------------------------------------------------------
   ## get group stats and transposed-normalised data
   tmp <- ngs.stats(mat, grp, nf, method = "mean")
   stats <- tmp$stats
   ## transposed and normalised data
   mat <- tmp$mat
 
-  ## ---------------------------------------------------------------------
   ## Get p-values, adjusted p-values and filtered-adjusted p-values.
   pval <- fdr
   padj <- fdr
@@ -824,7 +731,6 @@ stats.EBSeq <- function(data, cls, com, norm.method = "TMM") {
   padjf <- p.adj.f(pval, filter.stat = stats$mean, alpha = 0.1, method = "BH")
   padj.f <- padjf$padj.f
 
-  ## ------------------------------------------------------------------
   pval.adj <- cbind(pval = pval, padj = padj, padj.f = padj.f)
   pval.adj <- data.frame(pval.adj)
   rownames(pval.adj) <- colnames(mat)
@@ -846,8 +752,8 @@ stats.EBSeq <- function(data, cls, com, norm.method = "TMM") {
 ## ------------------------------------------------------------------------
 #' @export  
 #' @rdname stats
-#' @order 7
-#' 
+#' @order 6
+#' @importFrom samr SAMseq 
 ## wll-22-09-2014: Wrapper function for SAMseq
 ## wll-17-12-2014: add adjusted p-values with filtering
 ## Note: adjusted p-values with filtering may be not reasonable
@@ -866,7 +772,7 @@ stats.SAMseq <- function(data, cls, com, norm.method = "TMM") {
 
   ## Call SAMseq
   set.seed(100)
-  res <- SAMseq(
+  res <- samr::SAMseq(
     x = mat, y = grp, resp.type = "Two class unpaired",
     geneid = rownames(mat), genenames = rownames(mat),
     nperms = 1000, fdr.output = 1
@@ -917,20 +823,34 @@ stats.SAMseq <- function(data, cls, com, norm.method = "TMM") {
 }
 
 ## ------------------------------------------------------------------------
+#' @noRd 
+## wll-23-09-2014: Replace the original samr.estimate.depth. Beware that
+##  argument must be norm.method for keeping consistent with the original one
+##  and passing the argument outside. This function should also been assigned
+##  in the name space.
+samr.estimate.depth <- function(x, method = norm.method) {
+  norm.method <- match.arg(norm.method, c("DESeq", "TMM", "RLE", "UQ", "none"))
+  print(norm.method)
+  fac <- norm.factor(x, method = norm.method)
+  return(fac)
+}
+
+## override/replace a function in a package namespace
+## assignInNamespace("samr.estimate.depth", samr.estimate.depth, ns = "samr")
+
+## ------------------------------------------------------------------------
 #' @export  
 #' @rdname stats
-#' @order 8
-#' @importFrom limma vooma lmFit eBayes topTable
+#' @order 7
+#' @importFrom limma voom lmFit eBayes topTable
 #' 
 ## wll-06-01-2015: data analysis using limma + voom
 ## Note: data is [gene x replicate]
 stats.voom <- function(data, cls, com, norm.method = "TMM") {
-  ## -----------------------------------------------------------------------
   ## Get normalisation factors
   norm.method <- match.arg(norm.method, c("DESeq", "TMM", "RLE", "UQ", "none"))
   fac <- norm.factor(data, method = norm.method)
 
-  ## -----------------------------------------------------------------------
   ## Construct binary comparison info
   tmp <- paste(com, collapse = "|")
   ind <- grepl(tmp, cls)
@@ -938,22 +858,20 @@ stats.voom <- function(data, cls, com, norm.method = "TMM") {
   nf <- fac[ind]
   grp <- cls[ind, drop = TRUE]
 
-  ## --------------------------------------------------------------------
   ## Prepare data for voom+limma
   design <- model.matrix(~grp)
   v <- voom(mat, design, lib.size = colSums(mat) * nf)
   res <- lmFit(v, design)
   res <- eBayes(res)
-  tab <- topTable(res, coef = ncol(design), n = nrow(mat), sort.by = "none")
+  tab <- topTable(res, coef = ncol(design), number = nrow(mat),
+                  sort.by = "none")
 
-  ## --------------------------------------------------------------------
   ## get group stats and transposed-normalised data
   tmp <- ngs.stats(mat, grp, nf, method = "mean")
   stats <- tmp$stats
   ## transposed and normalised data
   mat <- tmp$mat
 
-  ## ---------------------------------------------------------------------
   ## Get p-values, adjusted p-values and filtered-adjusted p-values.
   pval <- tab$P.Value
   padj <- p.adjust(pval, method = "BH")
@@ -966,7 +884,78 @@ stats.voom <- function(data, cls, com, norm.method = "TMM") {
   res$padj <- padj
   res$padj.f <- padj.f
 
-  ## ------------------------------------------------------------------
+  pval.adj <- cbind(pval = pval, padj = padj, padj.f = padj.f)
+  pval.adj <- data.frame(pval.adj)
+  rownames(pval.adj) <- colnames(mat)
+
+  ## get reject number
+  tmp <- pval.adj[order(pval.adj[, 1], na.last = T), ]
+  rej.num <- pval.reject(tmp, alpha = c(0.01, 0.05, 0.1))
+
+  ## merge adjusted p-values
+  stats <- cbind(stats, pval.adj)
+
+  ## order based on pval
+  stats <- stats[order(stats$pval), ]
+
+  res <- list(stats = stats, rej.num = rej.num, data = mat, cls = grp, padjf = padjf)
+  return(res)
+}
+
+## ------------------------------------------------------------------------
+#' @export  
+#' @rdname stats
+#' @order 8
+#' 
+## wll-13-08-2014: Wrapper function for Wilcoxon test
+## wll-06-01-2015: minor changes.
+## Note: mat is [gene x replicate]
+stats.Wilcox <- function(data, cls, com, norm.method = "TMM") {
+  ## Get normalisation factors
+  norm.method <- match.arg(norm.method, c("DESeq", "TMM", "RLE", "UQ", "none"))
+  fac <- norm.factor(data, method = norm.method)
+
+  ## construct binary comparison info
+  tmp <- paste(com, collapse = "|")
+  ind <- grepl(tmp, cls)
+  mat <- data[, ind, drop = FALSE]
+  nf <- fac[ind]
+  grp <- cls[ind, drop = TRUE]
+
+  ## Wilcox allow the normalised data being used.
+  ## get group stats and transposed-normalised data
+  tmp <- ngs.stats(mat, grp, nf, method = "mean")
+  stats <- tmp$stats
+  ## transposed and normalised data
+  mat <- tmp$mat
+
+  ## lwc-30-07-2013: Wrapper functions for p-values from test
+  .pval <- function(x, y, test.method = "oneway.test", ...) {
+    test.method <- if (is.function(test.method)) {
+      test.method
+    } else if (is.character(test.method)) {
+      get(test.method)
+    } else {
+      eval(test.method)
+    }
+    pval <- test.method(x ~ y, ...)$p.value
+    return(pval)
+  }
+
+  ## call Wilconxon Test
+  pval <- sapply(as.data.frame(mat), function(x) {
+    .pval(x, grp, test.method = "wilcox.test", correct = FALSE)
+  })
+  ## wll-01-07-2014: 1. correct should be FLASE;
+  ##                 2. p-values can be extracted from stats.
+  ## adjust p-values (BH: Benjamini<U+FFFD>CHochberg. i.e. fdr)
+  padj <- p.adjust(pval, method = "BH")
+
+  ## get the adjusted p-values with filtering
+  names(pval) <- colnames(mat)
+  padjf <- p.adj.f(pval, filter.stat = stats$mean, alpha = 0.1, method = "BH")
+  padj.f <- padjf$padj.f
+
   pval.adj <- cbind(pval = pval, padj = padj, padj.f = padj.f)
   pval.adj <- data.frame(pval.adj)
   rownames(pval.adj) <- colnames(mat)
@@ -990,80 +979,14 @@ stats.voom <- function(data, cls, com, norm.method = "TMM") {
 #' @rdname stats
 #' @order 9
 #' 
-## wll-13-08-2014: Wrapper function for Wilcoxon test
-## wll-06-01-2015: minor changes.
-## Note: mat is [gene x replicate]
-stats.Wilcox <- function(data, cls, com, norm.method = "TMM") {
-  ## Get normalisation factors
-  norm.method <- match.arg(norm.method, c("DESeq", "TMM", "RLE", "UQ", "none"))
-  fac <- norm.factor(data, method = norm.method)
-
-  ## -----------------------------------------------------------------------
-  ## construct binary comparison info
-  tmp <- paste(com, collapse = "|")
-  ind <- grepl(tmp, cls)
-  mat <- data[, ind, drop = FALSE]
-  nf <- fac[ind]
-  grp <- cls[ind, drop = TRUE]
-
-  ## -----------------------------------------------------------------------
-  ## Wilcox allow the normalised data being used.
-  ## --------------------------------------------------------------------
-  ## get group stats and transposed-normalised data
-  tmp <- ngs.stats(mat, grp, nf, method = "mean")
-  stats <- tmp$stats
-  ## transposed and normalised data
-  mat <- tmp$mat
-
-  ## -----------------------------------------------------------------------
-  ## call Wilconxon Test
-  pval <- sapply(as.data.frame(mat), function(x) {
-    .pval(x, grp, test.method = "wilcox.test", correct = FALSE)
-  })
-  ## wll-01-07-2014: 1. correct should be FLASE;
-  ##                 2. p-values can be extracted from stats.
-  ## adjust p-values (BH: Benjamini<U+FFFD>CHochberg. i.e. fdr)
-  padj <- p.adjust(pval, method = "BH")
-
-  ## get the adjusted p-values with filtering
-  names(pval) <- colnames(mat)
-  padjf <- p.adj.f(pval, filter.stat = stats$mean, alpha = 0.1, method = "BH")
-  padj.f <- padjf$padj.f
-
-  ## ------------------------------------------------------------------
-  pval.adj <- cbind(pval = pval, padj = padj, padj.f = padj.f)
-  pval.adj <- data.frame(pval.adj)
-  rownames(pval.adj) <- colnames(mat)
-
-  ## get reject number
-  tmp <- pval.adj[order(pval.adj[, 1], na.last = T), ]
-  rej.num <- pval.reject(tmp, alpha = c(0.01, 0.05, 0.1))
-
-  ## merge adjusted p-values
-  stats <- cbind(stats, pval.adj)
-
-  ## order based on pval
-  stats <- stats[order(stats$pval), ]
-
-  res <- list(stats = stats, rej.num = rej.num, data = mat, cls = grp, padjf = padjf)
-  return(res)
-}
-
-## ------------------------------------------------------------------------
-#' @export  
-#' @rdname stats
-#' @order 10
-#' 
 ## wll-13-08-2014: Wrapper function for TSPM
 ## wll-06-01-2015: minor changes
 ## Note: mat is [gene x replicate]
 stats.TSPM <- function(data, cls, com, norm.method = "TMM") {
-  ## -----------------------------------------------------------------------
   ## Get normalisation factors
   norm.method <- match.arg(norm.method, c("DESeq", "TMM", "RLE", "UQ", "none"))
   fac <- norm.factor(data, method = norm.method)
 
-  ## -----------------------------------------------------------------------
   ## construct binary comparison info
   tmp <- paste(com, collapse = "|")
   ind <- grepl(tmp, cls)
@@ -1071,7 +994,6 @@ stats.TSPM <- function(data, cls, com, norm.method = "TMM") {
   nf <- fac[ind]
   grp <- cls[ind, drop = TRUE]
 
-  ## -----------------------------------------------------------------------
   ## call TSPM
   x0 <- rep(1, times = length(grp))
   res <- TSPM(mat, grp, x0, lib.size = colSums(mat) * nf)
@@ -1083,14 +1005,12 @@ stats.TSPM <- function(data, cls, com, norm.method = "TMM") {
   ## wll-24-04-14: Since we cannot convert res into data frame,only
   ##  "pvalues" and "padj" are returned.
 
-  ## --------------------------------------------------------------------
   ## get group stats and transposed-normalised data
   tmp <- ngs.stats(mat, grp, nf, method = "mean")
   stats <- tmp$stats
   ## transposed and normalised data
   mat <- tmp$mat
 
-  ## ---------------------------------------------------------------------
   ## Get p-values and FDRs
   pval <- res$pvalues
   padj <- res$padj
@@ -1102,7 +1022,6 @@ stats.TSPM <- function(data, cls, com, norm.method = "TMM") {
   padjf <- p.adj.f(pval, filter.stat = stats$mean, alpha = 0.1, method = "BH")
   padj.f <- padjf$padj.f
 
-  ## ------------------------------------------------------------------
   pval.adj <- cbind(pval = pval, padj = padj, padj.f = padj.f)
   pval.adj <- data.frame(pval.adj)
   rownames(pval.adj) <- colnames(mat)
@@ -1125,7 +1044,7 @@ stats.TSPM <- function(data, cls, com, norm.method = "TMM") {
 ## ------------------------------------------------------------------------
 #' Plot PCA of count data
 #' 
-#' Plot PCA of count data
+#' Plot PCA of count datasizeFactors<-
 #' 
 #' @param x data set for plotting
 #' @param intgroup  interesting groups: a character vector of names in
@@ -1137,9 +1056,12 @@ stats.TSPM <- function(data, cls, com, norm.method = "TMM") {
 #' @param select,sample select which samplr for plotting
 #' @return a plot
 #' @export  
+#' @import SummarizedExperiment
+#' @importFrom genefilter rowVars
+#' @importFrom ggplot2 ggplot aes_string  geom_point xlab ylab
 ## wll-26-11-2014:  Modify DESeq2's plotPCA: add argument select.
-plot_PCA <- function(x, intgroup = "condition", ntop = 500, returnData = FALSE,
-                    select, sample) {
+plot_PCA <- function(x, intgroup = "condition", ntop = 500, 
+                     returnData = FALSE, select, sample) {
 
   ## wll-26-11-2014: modification goes here.
   if (missing(select)) {
@@ -1168,7 +1090,8 @@ plot_PCA <- function(x, intgroup = "condition", ntop = 500, returnData = FALSE,
   group <- factor(apply(intgroup.df, 1, paste, collapse = " : "))
 
   ## assembly the data for the plot
-  d <- data.frame(PC1 = pca$x[, 1], PC2 = pca$x[, 2], group = group, intgroup.df, names = colnames(x))
+  d <- data.frame(PC1 = pca$x[, 1], PC2 = pca$x[, 2], group = group, 
+                  intgroup.df, names = colnames(x))
 
   if (returnData) {
     attr(d, "percentVar") <- percentVar[1:2]
@@ -1193,8 +1116,8 @@ plot_PCA <- function(x, intgroup = "condition", ntop = 500, returnData = FALSE,
 #' @param alpha p-values threshold for selection
 #' @param method p-calue correction method
 #' @return a list.
-#' @export 
-#' 
+#' @export
+#' @importFrom genefilter filtered_p
 ## wll-17-12-2014: Correct p-value with independent filtering.
 ## wll-06-01-2015: Each NGS wrapper function calls this function.
 ## Note: This function is modified from some code segments from
@@ -1229,21 +1152,6 @@ p.adj.f <- function(pval, filter.stat, alpha = 0.1, method = "BH") {
     rej = rej, padj = cbind(raw = pval, padj)
   )
 }
-
-## ------------------------------------------------------------------------
-#' @noRd 
-## wll-23-09-2014: Replace the original samr.estimate.depth. Beware that
-##  argument must be norm.method for keeping consistent with the original one
-##  and passing the argument outside. This function should also been assigned
-##  in the name space.
-samr.estimate.depth <- function(x, method = norm.method) {
-  norm.method <- match.arg(norm.method, c("DESeq", "TMM", "RLE", "UQ", "none"))
-  print(norm.method)
-  fac <- norm.factor(x, method = norm.method)
-  return(fac)
-}
-## override/replace a function in a package namespace
-assignInNamespace("samr.estimate.depth", samr.estimate.depth, ns = "samr")
 
 ## ------------------------------------------------------------------------
 #' Get OTUs table
@@ -1448,16 +1356,14 @@ TSPM <- function(counts, x1, x0, lib.size, alpha.wh = 0.05) {
 #' @importFrom ellipse ellipse
 #' @importFrom graphics lines text
 #' @importFrom stats prcomp quantile sd var mahalanobis median qchisq
-#' @import mt lattice ggplot2 genefilter DESeq2 DESeq edgeR NBPSeq EBSeq NOISeq samr
 #' @importFrom rlang .data
 #' @importFrom magrittr %>%
-#' @importFrom reshape2 melt dcast colsplit
+#' @importFrom reshape2 melt dcast
 #' @importFrom grDevices colorRampPalette dev.off tiff
 #' @importFrom stats complete.cases cor p.adjust pf pt qt qf cmdscale 
 #'   deviance glm hatvalues model.matrix pchisq poisson residuals dist
 #' @importFrom utils data head flush.console       
 #' @keywords internal
-## @import tidyr dplyr purrr tibble ggplot2 
 "_PACKAGE"
 
 #' Pipe operator
@@ -1476,25 +1382,6 @@ TSPM <- function(counts, x1, x0, lib.size, alpha.wh = 0.05) {
 ## wl-02-12-2021, Thus: get from running 'usethis::use_pipe()'
 NULL
 
-##  1) ngs
-##  2) ngs.stats
-##  3) ngs.cl
-##  4) norm.factor
-##  5) vst.rlt.tr
-##  6) plotPCA
-##  7) p.adj.f
-##  8) stats.voom
-##  9) stats.DESeq2
-## 10) stats.SAMseq
-## 11) stats.NOISeq
-## 12) stats.TSPM
-## 13) stats.edgeR
-## 14) stats.DESeq
-## 15) stats.NBPSeq
-## 16) stats.EBSeq
-## 17) stats.Wilcox
-## 18) samr.estimate.depth
-## 19) otu.wrapper
-## 20) sig.var
-## 21) vec.summ.ngs
-## 22) TSPM
+utils::globalVariables(c(
+  'classifier'
+))

@@ -32,8 +32,4 @@ Useful links:
 }
 
 }
-\author{
-\strong{Maintainer}: Wanchang Lin \email{wanchanglin@hotmail.com} (\href{https://orcid.org/YOUR-ORCID-ID}{ORCID})
-
-}
 \keyword{internal}

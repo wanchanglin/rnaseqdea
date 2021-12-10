@@ -2,7 +2,6 @@
 % Please edit documentation in R/rnaseqdea.R
 \name{stats.edgeR}
 \alias{stats.edgeR}
-\alias{stats.DESeq}
 \alias{stats.DESeq2}
 \alias{stats.NOISeq}
 \alias{stats.NBPSeq}
@@ -15,8 +14,6 @@
 \title{Wrapper function for RNA-Seq differential expression analysis}
 \usage{
 stats.edgeR(data, cls, com, norm.method = "TMM")
-
-stats.DESeq(data, cls, com, norm.method = "TMM")
 
 stats.DESeq2(data, cls, com, norm.method = "TMM")
 

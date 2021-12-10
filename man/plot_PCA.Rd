@@ -31,5 +31,5 @@ and PC2 with intgroup covariates for custom plotting (default is FALSE)}
 a plot
 }
 \description{
-Plot PCA of count data
+Plot PCA of count datasizeFactors<-
 }

@@ -17,6 +17,6 @@ LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
 Depends: R (>= 3.0.0)
-Imports: rlang, reshape2, plyr, ggplot2, mt, lattice, ellipse,
-  magrittr, limma, genefilter, DESeq2, DESeq, edgeR, NBPSeq, EBSeq, NOISeq, 
-  samr
+Imports: rlang, reshape2, ggplot2, mt, lattice, ellipse, magrittr, 
+  limma, SummarizedExperiment, genefilter, DESeq2, edgeR, NBPSeq, EBSeq,
+  NOISeq, samr
