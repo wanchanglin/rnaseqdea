@@ -17,6 +17,7 @@
 #' @importFrom lattice xyplot panel.xyplot panel.grid panel.abline histogram
 #'   bwplot 
 #' @importFrom mt panel.elli pca.comp
+#' @importFrom ggplot2 ggplot aes geom_point ggtitle xlab ylab
 ## wll-14-08-2014: NGS count data analysis.
 ## wll-15-08-2014: Return all plots individually.
 ## wll-17-08-2014: Re-write boxplot
@@ -107,19 +108,24 @@ ngs <- function(data, cls, com, method = "stats.TSPM", norm.method = "TMM") {
     dis <- dist(mat) ## Euclidean distance
     mds <- cmdscale(dis)
     mds <- as.data.frame(mds)
-    names(mds) <- c("Coordinate_1", "Coordinate_2")
+    names(mds) <- c("Coord1", "Coord2")
     mds <- cbind(mds, cls = res$cls)
     ## MDS plot
-    mds.p <-
-      xyplot(Coordinate_1 ~ Coordinate_2,
-        data = mds, groups = cls, as.table = T,
-        xlab = "Coordinate 2", ylab = "Coordinate 1",
-        main = paste(tit, ": MDS Plot", sep = ""),
-        auto.key = list(space = "right"),
-        par.settings = list(superpose.symbol = list(pch = rep(1:25))),
-        panel = panel.elli, ep = 0
-        # scales=list(cex =.75,relation="free")
-      )
+    # mds.p <-
+    #   xyplot(Coordinate_1 ~ Coordinate_2,
+    #     data = mds, groups = cls, as.table = T,
+    #     xlab = "Coordinate 2", ylab = "Coordinate 1",
+    #     main = paste(tit, ": MDS Plot", sep = ""),
+    #     auto.key = list(space = "right"),
+    #     par.settings = list(superpose.symbol = list(pch = rep(1:25))),
+    #     panel = panel.elli, ep = 0
+    #     # scales=list(cex =.75,relation="free")
+    #   )
+
+    mds.p <- 
+      ggplot(mds, aes(x = Coord2, y = Coord1, color = cls, shape = cls)) + 
+      geom_point() +
+      ggtitle(paste(tit, ": MDS Plot", sep = ""))
 
     ## PCA
     tmp <- pca.comp(mat, scale = FALSE, pcs = 1:2)
@@ -128,16 +134,23 @@ ngs <- function(data, cls, com, method = "stats.TSPM", norm.method = "TMM") {
     attr(pca, "varsn") <- tmp$varsn ## attr(pcs,"varsn") #' attributes(pcs)
     ## PCA plot
     dfn <- paste(names(tmp$vars), " (", tmp$vars[names(tmp$vars)], "%)", sep = "")
-    pca.p <-
-      xyplot(PC1 ~ PC2,
-        data = pca, groups = cls, as.table = T,
-        ylab = dfn[1], xlab = dfn[2],
-        main = paste(tit, ": PCA Plot", sep = ""),
-        auto.key = list(space = "right"),
-        par.settings = list(superpose.symbol = list(pch = rep(1:25))),
-        panel = panel.elli, ep = 0,
-        scales = list(cex = .75, relation = "free")
-      )
+    # pca.p <-
+    #   xyplot(PC1 ~ PC2,
+    #     data = pca, groups = cls, as.table = T,
+    #     ylab = dfn[1], xlab = dfn[2],
+    #     main = paste(tit, ": PCA Plot", sep = ""),
+    #     auto.key = list(space = "right"),
+    #     par.settings = list(superpose.symbol = list(pch = rep(1:25))),
+    #     panel = panel.elli, ep = 0,
+    #     scales = list(cex = .75, relation = "free")
+    #   )
+
+    pca.p <- 
+      ggplot(pca, aes(x = PC2,  y = PC1, color = cls, shape = cls)) + 
+      geom_point() +
+      xlab(dfn[2]) +
+      ylab(dfn[1]) +
+      ggtitle(paste(tit, ": PCA Plot", sep = ""))
 
     ## Boxplot
     box <- cbind(mat, cls = res$cls)
@@ -1383,5 +1396,9 @@ TSPM <- function(counts, x1, x0, lib.size, alpha.wh = 0.05) {
 NULL
 
 utils::globalVariables(c(
-  'classifier'
+  'classifier',
+  'PC1',
+  'PC2',
+  'Coord1',
+  'Coord2'
 ))
