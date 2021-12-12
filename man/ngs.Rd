@@ -4,7 +4,7 @@
 \alias{ngs}
 \title{RNA-Seq statistical analysis}
 \usage{
-ngs(data, cls, com, method = "stats.TSPM", norm.method = "TMM")
+ngs(data, cls, com, method = "stats.TSPM", norm.method = "TMM", ep = 0)
 }
 \arguments{
 \item{data}{a data frame with gene x replicate format}
@@ -15,7 +15,11 @@ ngs(data, cls, com, method = "stats.TSPM", norm.method = "TMM")
 
 \item{method}{statistical analysis methods for RNA-Seq}
 
-\item{norm.method}{normalisation method}
+\item{norm.method}{onormalisation method}
+
+\item{ep}{an integer for plotting ellipse. 1 and 2 for plotting overall
+and group ellipse, respectively. Otherwise, none. This is for PCA and
+MDS plot.}
 }
 \value{
 a list of objects

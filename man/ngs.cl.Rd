@@ -8,7 +8,8 @@ ngs.cl(
   dat.list,
   DF,
   method = c("randomForest", "svm"),
-  pars = valipars(sampling = "cv", niter = 20, nreps = 5, strat = TRUE)
+  pars = valipars(sampling = "cv", niter = 20, nreps = 5, strat = TRUE),
+  ep = 0
 )
 }
 \arguments{
@@ -19,6 +20,10 @@ ngs.cl(
 \item{method}{classification methods. Only support \code{randomForest} and \code{svm}}
 
 \item{pars}{sampling setting for classification}
+
+\item{ep}{an integer for plotting ellipse. 1 and 2 for plotting overall
+and group ellipse, respectively. Otherwise, none. This is for PCA and
+PLS plot.}
 }
 \value{
 a list with components of plots and classification results

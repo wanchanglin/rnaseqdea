@@ -1,6 +1,9 @@
 ## Functions for RNA-Seq differential expression analysis
 ## wl-23-06-2014, Mon: Commence
 ## wl-29-06-2019, Sat: Tidy up
+## wl-12-12-2021, Sun: assign samr.estimate.depth in names space for
+##  `stats.SAMseq` 
+## To-Do:
 
 ## ------------------------------------------------------------------------
 #' RNA-Seq statistical analysis
@@ -11,7 +14,10 @@
 #' @param cls a vector for class/group information
 #' @param com a character string for comparision
 #' @param method statistical analysis methods for RNA-Seq 
-#' @param norm.method normalisation method
+#' @param norm.method onormalisation method
+#' @param ep	an integer for plotting ellipse. 1 and 2 for plotting overall
+#'   and group ellipse, respectively. Otherwise, none. This is for PCA and
+#'   MDS plot.
 #' @return a list of objects
 #' @export 
 #' @importFrom lattice xyplot panel.xyplot panel.grid panel.abline histogram
@@ -23,7 +29,8 @@
 ## wl-11-12-2021, Sat: fix a bug and use 'mt::panel.elli.1'. Also try to use
 ##  'ggplot2'
 ## @importFrom ggplot2 ggplot aes geom_point ggtitle xlab ylab
-ngs <- function(data, cls, com, method = "stats.TSPM", norm.method = "TMM") {
+ngs <- function(data, cls, com, method = "stats.TSPM", norm.method = "TMM",
+                ep = 0) {
   norm.method <- match.arg(norm.method, c("DESeq", "TMM", "RLE", "UQ", "none"))
   method <-
     match.arg(
@@ -62,7 +69,8 @@ ngs <- function(data, cls, com, method = "stats.TSPM", norm.method = "TMM") {
       },
       xlab = "mean", ylab = "log2 fold change",
       main = list(paste(tit, ": MA-Plot", sep = ""), cex = 1.0),
-      scales = list(x = list(log = TRUE), y = list(log = FALSE, limits = c(-6, 6)))
+      scales = list(x = list(log = TRUE), 
+                    y = list(log = FALSE, limits = c(-6, 6)))
     )
 
   ## Volcano plot
@@ -70,7 +78,8 @@ ngs <- function(data, cls, com, method = "stats.TSPM", norm.method = "TMM") {
     xyplot(-log10(pval) ~ log2.fold.change,
       data = tmp,
       pch = 16, cex = .5,
-      col = ifelse(abs(tmp$log2.fold.change) > 2 & tmp$pval < 0.05, "#FF000050", "#00000050"),
+      col = ifelse(abs(tmp$log2.fold.change) > 2 & tmp$pval < 0.05, 
+                   "#FF000050", "#00000050"),
       panel = function(x, y, col, ...) {
         panel.xyplot(x, y, col = col, ...) ## col="black"
         panel.grid(h = -1, v = 2)
@@ -103,7 +112,7 @@ ngs <- function(data, cls, com, method = "stats.TSPM", norm.method = "TMM") {
     nam <- names(p.val)
     mat <- res$data[, nam]
 
-    dfn <- paste(colnames(mat), "(", format(p.val, digits = 3), ")", sep = "")
+    dfn <- paste0(colnames(mat), "(", format(p.val, digits = 3), ")")
     colnames(mat) <- dfn
 
     ## MDS
@@ -112,6 +121,7 @@ ngs <- function(data, cls, com, method = "stats.TSPM", norm.method = "TMM") {
     mds <- as.data.frame(mds)
     names(mds) <- c("Coord1", "Coord2")
     mds <- cbind(mds, cls = res$cls)
+
     ## MDS plot
     mds.p <-
       xyplot(Coord1 ~ Coord2,
@@ -123,7 +133,7 @@ ngs <- function(data, cls, com, method = "stats.TSPM", norm.method = "TMM") {
         panel = function(x, y, ...) {
           panel.xyplot(x, y, ...)
           panel.elli.1(x, y, ...)
-        }, ep = 0,
+        }, ep = ep,
         # scales=list(cex =.75,relation="free")
       )
 
@@ -138,7 +148,7 @@ ngs <- function(data, cls, com, method = "stats.TSPM", norm.method = "TMM") {
     pca <- cbind(pca, cls = res$cls)
     attr(pca, "varsn") <- tmp$varsn ## attr(pcs,"varsn") #' attributes(pcs)
     ## PCA plot
-    dfn <- paste(names(tmp$vars), " (", tmp$vars[names(tmp$vars)], "%)", sep = "")
+    dfn <- paste0(names(tmp$vars), " (", tmp$vars[names(tmp$vars)], "%)")
     pca.p <-
       xyplot(PC1 ~ PC2,
         data = pca, groups = cls, as.table = T,
@@ -149,7 +159,7 @@ ngs <- function(data, cls, com, method = "stats.TSPM", norm.method = "TMM") {
         panel = function(x, y, ...) {
           panel.xyplot(x, y, ...)
           panel.elli.1(x, y, ...)
-        }, ep = 0,
+        }, ep = ep,
         scales = list(cex = .75, relation = "free")
       )
 
@@ -219,6 +229,9 @@ ngs.stats <- function(mat, grp, nf, method = "mean") {
 #' @param DF a setset of plot tittle for PCA and PLS
 #' @param method classification methods. Only support `randomForest` and `svm`
 #' @param pars sampling setting for classification
+#' @param ep	an integer for plotting ellipse. 1 and 2 for plotting overall
+#'   and group ellipse, respectively. Otherwise, none. This is for PCA and
+#'   PLS plot.
 #' @return a list with components of plots and classification results
 #' @importFrom mt pca.plot.wrap pls.plot.wrap aam.mcl valipars 
 #' @importFrom lattice dotplot
@@ -227,16 +240,17 @@ ngs.stats <- function(mat, grp, nf, method = "mean") {
 ##  classification.
 ngs.cl <- function(dat.list, DF, method = c("randomForest", "svm"),
                    pars = valipars(sampling = "cv", niter = 20, nreps = 5,
-                                   strat = TRUE)) {
+                                   strat = TRUE), ep =0) {
 
   ## PCA and PLS plot
   pca <- pca.plot.wrap(dat.list,
     title = DF, par.strip.text = list(cex = 0.75),
-    scales = list(cex = .75, relation = "free"), ep = 0
+    scales = list(cex = .75, relation = "free"), ep = ep
   ) ## free
   pls <- pls.plot.wrap(dat.list,
     title = DF, par.strip.text = list(cex = 0.75),
-    scales = list(cex = 0.75, relation = "same", x = list(draw = T))
+    scales = list(cex = 0.75, relation = "same", x = list(draw = T)),
+    ep = ep
   )
 
   ## Classification
@@ -379,9 +393,6 @@ vst.rlt.tr <- function(data, method = c("vst", "rlt"), ...) {
 #'   - class i nformation
 #'   - adjusted p-values
 #' @name stats
-#' @examples 
-#' ## To use [stats.SAMseq()], you have to override/replace function:
-#' assignInNamespace("samr.estimate.depth", samr.estimate.depth, ns = "samr")
 NULL
 
 ## ------------------------------------------------------------------------
@@ -795,7 +806,9 @@ stats.SAMseq <- function(data, cls, com, norm.method = "TMM") {
   grp <- cls[ind, drop = TRUE]
 
   ## Call SAMseq
-  set.seed(100)
+  ## wl-12-12-2021, Sun: put here to override the original one
+  assignInNamespace("samr.estimate.depth", samr.estimate.depth, ns = "samr")
+  # set.seed(100)
   res <- samr::SAMseq(
     x = mat, y = grp, resp.type = "Two class unpaired",
     geneid = rownames(mat), genenames = rownames(mat),
@@ -855,9 +868,10 @@ stats.SAMseq <- function(data, cls, com, norm.method = "TMM") {
 #'   observation per column.
 #' @param method normalisation method
 #' @return a normalisation factor
-#' @details use this one to override the original one in `samr`
+#' @details use this one to override the original 
+#'   [samr::samr.estimate.depth()] for [stats.SAMseq()].
 #' @examples 
-#' ## To use [stats.SAMseq()], you have to override/replace function:
+#' ## 'stats.SAMseq()' use this one to override original one:
 #' assignInNamespace("samr.estimate.depth", samr.estimate.depth, ns = "samr")
 #' @export  
 ## wll-23-09-2014: Replace the original samr.estimate.depth. Beware that
@@ -1396,7 +1410,7 @@ TSPM <- function(counts, x1, x0, lib.size, alpha.wh = 0.05) {
 #' @importFrom grDevices colorRampPalette dev.off tiff
 #' @importFrom stats complete.cases cor p.adjust pf pt qt qf cmdscale 
 #'   deviance glm hatvalues model.matrix pchisq poisson residuals dist
-#' @importFrom utils data head flush.console       
+#' @importFrom utils flush.console  assignInNamespace     
 #' @keywords internal
 "_PACKAGE"
 

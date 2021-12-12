@@ -53,7 +53,3 @@ a list with:
 \description{
 Call different methods with normalisation methods
 }
-\examples{
-## To use [stats.SAMseq()], you have to override/replace function:
-assignInNamespace("samr.estimate.depth", samr.estimate.depth, ns = "samr")
-}

@@ -19,9 +19,10 @@ a normalisation factor
 Estimate the sequencing depth of each experiment for sequencing data.
 }
 \details{
-use this one to override the original one in \code{samr}
+use this one to override the original
+\code{\link[samr:samr.estimate.depth]{samr::samr.estimate.depth()}} for \code{\link[=stats.SAMseq]{stats.SAMseq()}}.
 }
 \examples{
-## To use [stats.SAMseq()], you have to override/replace function:
+## 'stats.SAMseq()' use this one to override original one:
 assignInNamespace("samr.estimate.depth", samr.estimate.depth, ns = "samr")
 }
