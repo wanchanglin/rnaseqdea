@@ -379,6 +379,9 @@ vst.rlt.tr <- function(data, method = c("vst", "rlt"), ...) {
 #'   - class i nformation
 #'   - adjusted p-values
 #' @name stats
+#' @examples 
+#' ## To use [stats.SAMseq()], you have to override/replace function:
+#' assignInNamespace("samr.estimate.depth", samr.estimate.depth, ns = "samr")
 NULL
 
 ## ------------------------------------------------------------------------
@@ -844,7 +847,19 @@ stats.SAMseq <- function(data, cls, com, norm.method = "TMM") {
 }
 
 ## ------------------------------------------------------------------------
-#' @noRd 
+#' Estimate the sequencing depth
+#' 
+#' Estimate the sequencing depth of each experiment for sequencing data.
+#' 
+#' @param x the original count matrix. p by n matrix of features, one
+#'   observation per column.
+#' @param method normalisation method
+#' @return a normalisation factor
+#' @details use this one to override the original one in `samr`
+#' @examples 
+#' ## To use [stats.SAMseq()], you have to override/replace function:
+#' assignInNamespace("samr.estimate.depth", samr.estimate.depth, ns = "samr")
+#' @export  
 ## wll-23-09-2014: Replace the original samr.estimate.depth. Beware that
 ##  argument must be norm.method for keeping consistent with the original one
 ##  and passing the argument outside. This function should also been assigned
@@ -856,8 +871,6 @@ samr.estimate.depth <- function(x, method = norm.method) {
   return(fac)
 }
 
-## override/replace a function in a package namespace
-## assignInNamespace("samr.estimate.depth", samr.estimate.depth, ns = "samr")
 
 ## ------------------------------------------------------------------------
 #' @export  
