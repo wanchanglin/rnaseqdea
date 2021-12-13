@@ -18,7 +18,16 @@
 #' @param ep	an integer for plotting ellipse. 1 and 2 for plotting overall
 #'   and group ellipse, respectively. Otherwise, none. This is for PCA and
 #'   MDS plot.
-#' @return a list of objects
+#' @return a list with contents: \itemize{
+#'  \item ma.p MA plot
+#'  \item volcano.p ivolcano plot
+#'  \item hist.p histogram
+#'  \item data.s normalised data set with highly expressed variables
+#'  \item mad.p MAD plot
+#'  \item pca PCA values
+#'  \item pca.p PCA plot
+#'  \item box.p boxplot
+#' }
 #' @export 
 #' @importFrom lattice xyplot panel.xyplot panel.grid panel.abline histogram
 #'   bwplot 
@@ -29,8 +38,8 @@
 ## wl-11-12-2021, Sat: fix a bug and use 'mt::panel.elli.1'. Also try to use
 ##  'ggplot2'
 ## @importFrom ggplot2 ggplot aes geom_point ggtitle xlab ylab
-ngs <- function(data, cls, com, method = "stats.TSPM", norm.method = "TMM",
-                ep = 0) {
+rna_seq_dea <- function(data, cls, com, method = "stats.TSPM",
+                        norm.method = "TMM", ep = 0) {
   norm.method <- match.arg(norm.method, c("DESeq", "TMM", "RLE", "UQ", "none"))
   method <-
     match.arg(
@@ -193,9 +202,9 @@ ngs <- function(data, cls, com, method = "stats.TSPM", norm.method = "TMM",
 }
 
 ## ------------------------------------------------------------------------
-#' Get group stats of normalised NGS data
+#' Get group stats of normalised RNA-Seq data
 #' 
-#' Get group stats of normalised NGS data
+#' Get group stats of normalised RNA-Seq data
 #' 
 #' @param mat raw count data with gene x replicate format
 #' @param grp  group information
@@ -206,7 +215,7 @@ ngs <- function(data, cls, com, method = "stats.TSPM", norm.method = "TMM",
 #' @importFrom mt stats.mat
 ## wll-17-12-2014: Wrapper function of group stats for normalised NGS data.
 ## Also the normalised data is returned.
-ngs.stats <- function(mat, grp, nf, method = "mean") {
+rna_seq_stats <- function(mat, grp, nf, method = "mean") {
   ## Normalise and transpose data
   ## nf <- nf * (1e-6*colSums(mat))       #' edgeR style
   mat <- t(mat) / nf
@@ -220,7 +229,7 @@ ngs.stats <- function(mat, grp, nf, method = "mean") {
 }
 
 ## ------------------------------------------------------------------------
-#' Assess feature selection of NGS
+#' Assess feature selection of RNA-Seq data
 #' 
 #' Apply unsupervised and supervised lotting and classification to assess the 
 #' goodness of feture selection for count data.
@@ -238,9 +247,9 @@ ngs.stats <- function(mat, grp, nf, method = "mean") {
 #' @export 
 ## wll-03-12-2014: Assess feature selection of NGS: PCA plot, PLS plot and
 ##  classification.
-ngs.cl <- function(dat.list, DF, method = c("randomForest", "svm"),
-                   pars = valipars(sampling = "cv", niter = 20, nreps = 5,
-                                   strat = TRUE), ep =0) {
+rna_seq_cl <- function(dat.list, DF, method = c("randomForest", "svm"),
+                       pars = valipars(sampling = "cv", niter = 20, 
+                                       nreps = 5, strat = TRUE), ep =0) {
 
   ## PCA and PLS plot
   pca <- pca.plot.wrap(dat.list,
@@ -267,17 +276,17 @@ ngs.cl <- function(dat.list, DF, method = c("randomForest", "svm"),
   z <- z[complete.cases(z), ] ## in case NAs
   names(z) <- c("classifier", "assessment", "value", "data")
 
-  aam.p <- dotplot(factor(data, levels = rev(unique.default(data))) ~ value | assessment,
-    data = z, groups = classifier, as.table = T, layout = c(length(unique(z$assessment)), 1),
-    par.settings = list(
-      superpose.line = list(lty = c(1:7)),
-      superpose.symbol = list(pch = rep(1:25))
-    ),
-    type = "o", ## comment this line to get original dot plot
-    auto.key = list(lines = TRUE, space = "bottom", columns = nlevels(z$classifier)),
-    ## title="classifier"),
-    xlab = "", main = paste(DF, " Classification with resampling", sep = ":")
-  )
+  aam.p <- 
+    dotplot(factor(data, levels = rev(unique.default(data))) ~ value | assessment,
+            data = z, groups = classifier, as.table = T, 
+            layout = c(length(unique(z$assessment)), 1),
+            par.settings = list(superpose.line = list(lty = c(1:7)),
+                                superpose.symbol = list(pch = rep(1:25))),
+            type = "o", ## comment this line to get original dot plot
+            auto.key = list(lines = TRUE, space = "bottom",
+                            columns = nlevels(z$classifier)),
+            xlab = "", 
+            main = paste(DF, " Classification with resampling", sep = ":"))
   aam.p
 
   list(pca = pca, pls = pls, aam = aam, aam.p = aam.p)
@@ -386,12 +395,14 @@ vst.rlt.tr <- function(data, method = c("vst", "rlt"), ...) {
 #' @param cls a vector for class/group information
 #' @param com a character string for comparision
 #' @param norm.method normalisation method
-#' @return a list with:
-#'   - istatistical summary
-#'   - p-value rejection
-#'   - data set
-#'   - class i nformation
-#'   - adjusted p-values
+#' @return a list with contents: \itemize{
+#'   \item stats statiststical summary
+#'   \item rej.num p-value rejection
+#'   \item data transposed and normalised data set
+#'   \item cls factor for class information
+#'   \item padjf p-values, adjusted p-values and adjusted p-values with
+#'   filtering
+#' }
 #' @name stats
 NULL
 
@@ -399,6 +410,7 @@ NULL
 #' @export  
 #' @rdname stats
 #' @order 1
+#' @details `stats.edgeR` uses only [edgeR::exactTest()] for modelling.
 #' @importFrom edgeR DGEList estimateCommonDisp estimateTagwiseDisp exactTest
 #' @importFrom mt pval.reject
 ## wll-13-08-2014: Wrapper function for edgeR
@@ -439,7 +451,7 @@ stats.edgeR <- function(data, cls, com, norm.method = "TMM") {
 
   ## --------------------------------------------------------------------
   ## get group stats and transposed-normalised data
-  tmp <- ngs.stats(mat, grp, nf, method = "mean")
+  tmp <- rna_seq_stats(mat, grp, nf, method = "mean")
   stats <- tmp$stats
   ## transposed and normalised data
   mat <- tmp$mat
@@ -485,6 +497,7 @@ stats.edgeR <- function(data, cls, com, norm.method = "TMM") {
 #' @export  
 #' @rdname stats
 #' @order 2
+#' @details `stats.DESeq2` uses [DESeq2::nbinomWaldTest()] only.
 #' @importFrom DESeq2 DESeqDataSetFromMatrix estimateDispersions 
 #'   nbinomWaldTest results sizeFactors<-
 ## wll-19-11-2014: data analysis using DESeq2
@@ -533,7 +546,7 @@ stats.DESeq2 <- function(data, cls, com, norm.method = "TMM") {
   names(res)[ind] <- "pval"
 
   ## get group stats and transposed-normalised data
-  tmp <- ngs.stats(mat, grp, nf, method = "mean")
+  tmp <- rna_seq_stats(mat, grp, nf, method = "mean")
   stats <- tmp$stats
   ## transposed and normalised data
   mat <- tmp$mat
@@ -592,7 +605,7 @@ stats.NOISeq <- function(data, cls, com, norm.method = "TMM") {
   ## NOISeq allow the normalised data being used.
 
   ## get group stats and transposed-normalised data
-  tmp <- ngs.stats(mat, grp, nf, method = "mean")
+  tmp <- rna_seq_stats(mat, grp, nf, method = "mean")
   stats <- tmp$stats
   ## transposed and normalised data
   mat <- tmp$mat
@@ -672,7 +685,7 @@ stats.NBPSeq <- function(data, cls, com, norm.method = "TMM") {
 
   ## --------------------------------------------------------------------
   ## get group stats and transposed-normalised data
-  tmp <- ngs.stats(mat, grp, nf, method = "mean")
+  tmp <- rna_seq_stats(mat, grp, nf, method = "mean")
   stats <- tmp$stats
   ## transposed and normalised data
   mat <- tmp$mat
@@ -753,7 +766,7 @@ stats.EBSeq <- function(data, cls, com, norm.method = "TMM") {
   })
 
   ## get group stats and transposed-normalised data
-  tmp <- ngs.stats(mat, grp, nf, method = "mean")
+  tmp <- rna_seq_stats(mat, grp, nf, method = "mean")
   stats <- tmp$stats
   ## transposed and normalised data
   mat <- tmp$mat
@@ -831,7 +844,7 @@ stats.SAMseq <- function(data, cls, com, norm.method = "TMM") {
   pval <- fdr ## No p-values and therefore assign fdr to it
 
   ## get group stats and transposed-normalised data
-  tmp <- ngs.stats(mat, grp, nf, method = "mean")
+  tmp <- rna_seq_stats(mat, grp, nf, method = "mean")
   stats <- tmp$stats
   ## transposed and normalised data
   mat <- tmp$mat
@@ -915,7 +928,7 @@ stats.voom <- function(data, cls, com, norm.method = "TMM") {
                   sort.by = "none")
 
   ## get group stats and transposed-normalised data
-  tmp <- ngs.stats(mat, grp, nf, method = "mean")
+  tmp <- rna_seq_stats(mat, grp, nf, method = "mean")
   stats <- tmp$stats
   ## transposed and normalised data
   mat <- tmp$mat
@@ -972,7 +985,7 @@ stats.Wilcox <- function(data, cls, com, norm.method = "TMM") {
 
   ## Wilcox allow the normalised data being used.
   ## get group stats and transposed-normalised data
-  tmp <- ngs.stats(mat, grp, nf, method = "mean")
+  tmp <- rna_seq_stats(mat, grp, nf, method = "mean")
   stats <- tmp$stats
   ## transposed and normalised data
   mat <- tmp$mat
@@ -1054,7 +1067,7 @@ stats.TSPM <- function(data, cls, com, norm.method = "TMM") {
   ##  "pvalues" and "padj" are returned.
 
   ## get group stats and transposed-normalised data
-  tmp <- ngs.stats(mat, grp, nf, method = "mean")
+  tmp <- rna_seq_stats(mat, grp, nf, method = "mean")
   stats <- tmp$stats
   ## transposed and normalised data
   mat <- tmp$mat

@@ -41,15 +41,20 @@ stats.TSPM(data, cls, com, norm.method = "TMM")
 \item{norm.method}{normalisation method}
 }
 \value{
-a list with:
-\itemize{
-\item istatistical summary
-\item p-value rejection
-\item data set
-\item class i nformation
-\item adjusted p-values
+a list with contents: \itemize{
+\item stats statiststical summary
+\item rej.num p-value rejection
+\item data transposed and normalised data set
+\item cls factor for class information
+\item padjf p-values, adjusted p-values and adjusted p-values with
+filtering
 }
 }
 \description{
 Call different methods with normalisation methods
+}
+\details{
+\code{stats.edgeR} uses only \code{\link[edgeR:exactTest]{edgeR::exactTest()}} for modelling.
+
+\code{stats.DESeq2} uses \code{\link[DESeq2:nbinomWaldTest]{DESeq2::nbinomWaldTest()}} only.
 }
