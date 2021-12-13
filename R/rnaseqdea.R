@@ -3,7 +3,6 @@
 ## wl-29-06-2019, Sat: Tidy up
 ## wl-12-12-2021, Sun: assign samr.estimate.depth in names space for
 ##  `stats.SAMseq` 
-## To-Do:
 
 ## ------------------------------------------------------------------------
 #' RNA-Seq statistical analysis
@@ -13,11 +12,12 @@
 #' @param data a data frame with gene x replicate format
 #' @param cls a vector for class/group information
 #' @param com a character string for comparision
-#' @param method statistical analysis methods for RNA-Seq 
+#' @param stats.method statistical analysis methods for RNA-Seq 
 #' @param norm.method onormalisation method
 #' @param ep	an integer for plotting ellipse. 1 and 2 for plotting overall
 #'   and group ellipse, respectively. Otherwise, none. This is for PCA and
 #'   MDS plot.
+#' @param ... further parameters to `stats.method`
 #' @return a list with contents: \itemize{
 #'  \item ma.p MA plot
 #'  \item volcano.p ivolcano plot
@@ -37,20 +37,28 @@
 ## wll-17-08-2014: Re-write boxplot
 ## wl-11-12-2021, Sat: fix a bug and use 'mt::panel.elli.1'. Also try to use
 ##  'ggplot2'
+## wl-13-12-2021, Mon: change function name from 'ngs' and add dot argument
 ## @importFrom ggplot2 ggplot aes geom_point ggtitle xlab ylab
-rna_seq_dea <- function(data, cls, com, method = "stats.TSPM",
-                        norm.method = "TMM", ep = 0) {
+rna_seq_dea <- function(data, cls, com, stats.method = "stats.TSPM",
+                        norm.method = "TMM", ep = 0, ...) {
   norm.method <- match.arg(norm.method, c("DESeq", "TMM", "RLE", "UQ", "none"))
-  method <-
+  stats.method <-
     match.arg(
-      method,
-      c("stats.edgeR", "stats.DESeq2", "stats.NOISeq", "stats.NBPSeq",
-        "stats.EBSeq", "stats.SAMseq",  "stats.voom", "stats.Wilcox",  
-        "stats.TSPM"))
+      stats.method,
+      c(
+        "stats.edgeR", "stats.DESeq2", "stats.NOISeq", "stats.NBPSeq",
+        "stats.EBSeq", "stats.SAMseq", "stats.voom", "stats.test",
+        "stats.TSPM"
+      )
+    )
     
   tit <- paste(com, collapse = "~") ## plot title
+  ## res <- do.call(method, list(data, cls, com, norm.method))
+  
+  ## wl-13-12-2021, Mon: add dots
+  dots <- list(...) 
+  res <- do.call(stats.method, c(list(data, cls, com, norm.method), dots))
 
-  res <- do.call(method, list(data, cls, com, norm.method))
   ## method <-
   ##   if (is.function(method)) method
   ##   else if (is.character(method)) get(method)
@@ -395,6 +403,9 @@ vst.rlt.tr <- function(data, method = c("vst", "rlt"), ...) {
 #' @param cls a vector for class/group information
 #' @param com a character string for comparision
 #' @param norm.method normalisation method
+#' @param test.method hypothesis testing method for `stats.test`, e.g. 
+#'   [oneway.test()], [kruskal.test()],  [wilcox.test()], [t.test()]. 
+#' @param ... further parameters to be passed into modelling
 #' @return a list with contents: \itemize{
 #'   \item stats statiststical summary
 #'   \item rej.num p-value rejection
@@ -419,7 +430,7 @@ NULL
 ## To-Do:
 ##  1.) update 'stats.edgeR' with 'glmFit' and 'glmLRT'.
 ##  2.) consider the design matrices and contrasts for multi-factor test
-stats.edgeR <- function(data, cls, com, norm.method = "TMM") {
+stats.edgeR <- function(data, cls, com, norm.method = "TMM", ...) {
 
   ## -----------------------------------------------------------------------
   ## Get normalisation factors
@@ -445,7 +456,7 @@ stats.edgeR <- function(data, cls, com, norm.method = "TMM") {
 
   ## ------------------------------------------------------------------------
   ## wl-27-07-2019, Sat: check 'glmLRT'
-  res <- edgeR::exactTest(dge) ## default: pair=1:2
+  res <- edgeR::exactTest(dge, ...) ## default: pair=1:2
   tab <- res$table
   names(tab)[3] <- "pval"
 
@@ -504,7 +515,7 @@ stats.edgeR <- function(data, cls, com, norm.method = "TMM") {
 ## wll-17-12-2014: add adjusted p-values with filtering
 ## wll-04-04-2017: add DESeq2:: in front of its functions.
 ## Note: data is [gene x replicate]
-stats.DESeq2 <- function(data, cls, com, norm.method = "TMM") {
+stats.DESeq2 <- function(data, cls, com, norm.method = "TMM", ...) {
 
   ## Get normalisation factors
   norm.method <- match.arg(norm.method, c("DESeq", "TMM", "RLE", "UQ", "none"))
@@ -533,7 +544,7 @@ stats.DESeq2 <- function(data, cls, com, norm.method = "TMM") {
   ## dds <- estimateSizeFactors(dds)
   dds <- DESeq2::estimateDispersions(dds, fitType = "local")
   ## wll-04-04-2017: change fitType as "local"
-  dds <- DESeq2::nbinomWaldTest(dds) ## DESeq's default algorithm
+  dds <- DESeq2::nbinomWaldTest(dds, ...) ## DESeq's default algorithm
 
   ## You can use the wrapper function
   ## dds <- DESeq(dds)
@@ -589,7 +600,7 @@ stats.DESeq2 <- function(data, cls, com, norm.method = "TMM") {
 ## wll-15-09-2014: Wrapper function for NOISeq
 ## wll-17-12-2014: add adjusted p-values with filtering
 ## Note: adjusted p-values with filtering may be not reasonable
-stats.NOISeq <- function(data, cls, com, norm.method = "TMM") {
+stats.NOISeq <- function(data, cls, com, norm.method = "TMM", ...) {
 
   ## Get normalisation factors
   norm.method <- match.arg(norm.method, c("DESeq", "TMM", "RLE", "UQ", "none"))
@@ -622,7 +633,7 @@ stats.NOISeq <- function(data, cls, com, norm.method = "TMM") {
   ## Call NOISeq. No normalisation and filtering. Beware that do not use
   ##  noiseq since the probability cannot be convert to FDR.
   res <- NOISeq::noiseqbio(dat, norm = "n", factor = "grp", filter = 0,
-                           k = 0.0)
+                           k = 0.0, ...)
   tab <- res@results[[1]]
   tab$pval <- 1 - tab$prob
   tab$padj <- 1 - tab$prob
@@ -662,7 +673,7 @@ stats.NOISeq <- function(data, cls, com, norm.method = "TMM") {
 ## wll-02-09-2014: data analysis using NBPSeq
 ## wll-06-01-2015: minor changes
 ## Note: mat is [gene x replicate]
-stats.NBPSeq <- function(data, cls, com, norm.method = "TMM") {
+stats.NBPSeq <- function(data, cls, com, norm.method = "TMM", ...) {
   ## Get normalisation factors
   norm.method <- match.arg(norm.method, c("DESeq", "TMM", "RLE", "UQ", "none"))
   fac <- norm.factor(data, method = norm.method)
@@ -677,20 +688,18 @@ stats.NBPSeq <- function(data, cls, com, norm.method = "TMM") {
   ## Call NOISeq
   res <- NBPSeq::nbp.test(as.matrix(mat), grp,
     grp1 = levels(grp)[1], grp2 = levels(grp)[2],
-    norm.factors = nf
+    norm.factors = nf, ...
   )
   ## Show boxplots, MA-plot, mean-variance plot and mean-dispersion plot
   ## par(mfrow=c(3,2));
   ## plot(res);
 
-  ## --------------------------------------------------------------------
   ## get group stats and transposed-normalised data
   tmp <- rna_seq_stats(mat, grp, nf, method = "mean")
   stats <- tmp$stats
   ## transposed and normalised data
   mat <- tmp$mat
 
-  ## ---------------------------------------------------------------------
   ## Get p-values, adjusted p-values and filtered-adjusted p-values.
   pval <- res$p.values
   ## padj <- res$q.values    #' wll-15-09-2014: qvalues is not equal to FDR.
@@ -735,7 +744,7 @@ stats.NBPSeq <- function(data, cls, com, norm.method = "TMM") {
 ## wll comment: Totally agree. But any filtering should be done before
 ##   calling the differential analysis function
 ## wll-06-01-2015: minor changes. padj.f may not be reasonable.
-stats.EBSeq <- function(data, cls, com, norm.method = "TMM") {
+stats.EBSeq <- function(data, cls, com, norm.method = "TMM", ...) {
   ## Get normalisation factors
   norm.method <- match.arg(norm.method, c("DESeq", "TMM", "RLE", "UQ", "none"))
   fac <- norm.factor(data, method = norm.method)
@@ -748,10 +757,8 @@ stats.EBSeq <- function(data, cls, com, norm.method = "TMM") {
   grp <- cls[ind, drop = TRUE]
 
   ## Call EBSeq
-  res <- EBSeq::EBTest(
-    Data = as.matrix(mat), Conditions = grp, sizeFactors = nf, maxround = 5,
-    QtrmCut = -1
-  )
+  res <- EBSeq::EBTest(Data = as.matrix(mat), Conditions = grp, 
+                       sizeFactors = nf, maxround = 5, QtrmCut = -1, ...)
   ## Note: 1.) Data must be matrix
   ##       2.) Do NOT filter genes by quantile, so QtrmCut=-1. The filtering
   ##           should be done outside this function.
@@ -805,7 +812,7 @@ stats.EBSeq <- function(data, cls, com, norm.method = "TMM") {
 ## wll-22-09-2014: Wrapper function for SAMseq
 ## wll-17-12-2014: add adjusted p-values with filtering
 ## Note: adjusted p-values with filtering may be not reasonable
-stats.SAMseq <- function(data, cls, com, norm.method = "TMM") {
+stats.SAMseq <- function(data, cls, com, norm.method = "TMM", ...) {
 
   ## Get normalisation factors
   norm.method <- match.arg(norm.method, c("DESeq", "TMM", "RLE", "UQ", "none"))
@@ -825,7 +832,7 @@ stats.SAMseq <- function(data, cls, com, norm.method = "TMM") {
   res <- samr::SAMseq(
     x = mat, y = grp, resp.type = "Two class unpaired",
     geneid = rownames(mat), genenames = rownames(mat),
-    nperms = 1000, fdr.output = 1
+    nperms = 1000, fdr.output = 1, ...
   )
   ## Note: x must be count number.
 
@@ -873,33 +880,6 @@ stats.SAMseq <- function(data, cls, com, norm.method = "TMM") {
 }
 
 ## ------------------------------------------------------------------------
-#' Estimate the sequencing depth
-#' 
-#' Estimate the sequencing depth of each experiment for sequencing data.
-#' 
-#' @param x the original count matrix. p by n matrix of features, one
-#'   observation per column.
-#' @param method normalisation method
-#' @return a normalisation factor
-#' @details use this one to override the original 
-#'   [samr::samr.estimate.depth()] for [stats.SAMseq()].
-#' @examples 
-#' ## 'stats.SAMseq()' use this one to override original one:
-#' assignInNamespace("samr.estimate.depth", samr.estimate.depth, ns = "samr")
-#' @export  
-## wll-23-09-2014: Replace the original samr.estimate.depth. Beware that
-##  argument must be norm.method for keeping consistent with the original one
-##  and passing the argument outside. This function should also been assigned
-##  in the name space.
-samr.estimate.depth <- function(x, method = norm.method) {
-  norm.method <- match.arg(norm.method, c("DESeq", "TMM", "RLE", "UQ", "none"))
-  print(norm.method)
-  fac <- norm.factor(x, method = norm.method)
-  return(fac)
-}
-
-
-## ------------------------------------------------------------------------
 #' @export  
 #' @rdname stats
 #' @order 7
@@ -907,7 +887,7 @@ samr.estimate.depth <- function(x, method = norm.method) {
 #' 
 ## wll-06-01-2015: data analysis using limma + voom
 ## Note: data is [gene x replicate]
-stats.voom <- function(data, cls, com, norm.method = "TMM") {
+stats.voom <- function(data, cls, com, norm.method = "TMM", ...) {
   ## Get normalisation factors
   norm.method <- match.arg(norm.method, c("DESeq", "TMM", "RLE", "UQ", "none"))
   fac <- norm.factor(data, method = norm.method)
@@ -922,7 +902,7 @@ stats.voom <- function(data, cls, com, norm.method = "TMM") {
   ## Prepare data for voom+limma
   design <- model.matrix(~grp)
   v <- voom(mat, design, lib.size = colSums(mat) * nf)
-  res <- lmFit(v, design)
+  res <- lmFit(v, design, ...)
   res <- eBayes(res)
   tab <- topTable(res, coef = ncol(design), number = nrow(mat),
                   sort.by = "none")
@@ -968,10 +948,12 @@ stats.voom <- function(data, cls, com, norm.method = "TMM") {
 #' @rdname stats
 #' @order 8
 #' 
-## wll-13-08-2014: Wrapper function for Wilcoxon test
+## wll-13-08-2014: Wrapper function for statistical hypothesis test
 ## wll-06-01-2015: minor changes.
-## Note: mat is [gene x replicate]
-stats.Wilcox <- function(data, cls, com, norm.method = "TMM") {
+## wl-13-12-2021, Mon: change names from 'stats.Wicox' and add 'test.method'
+## Note: 'data' is [gene x replicate]
+stats.test <- function(data, cls, com, norm.method = "TMM", 
+                       test.method = "oneway.test", ...) {
   ## Get normalisation factors
   norm.method <- match.arg(norm.method, c("DESeq", "TMM", "RLE", "UQ", "none"))
   fac <- norm.factor(data, method = norm.method)
@@ -1005,7 +987,7 @@ stats.Wilcox <- function(data, cls, com, norm.method = "TMM") {
 
   ## call Wilconxon Test
   pval <- sapply(as.data.frame(mat), function(x) {
-    .pval(x, grp, test.method = "wilcox.test", correct = FALSE)
+    .pval(x, grp, test.method = test.method, ...)
   })
   ## wll-01-07-2014: 1. correct should be FLASE;
   ##                 2. p-values can be extracted from stats.
@@ -1043,7 +1025,7 @@ stats.Wilcox <- function(data, cls, com, norm.method = "TMM") {
 ## wll-13-08-2014: Wrapper function for TSPM
 ## wll-06-01-2015: minor changes
 ## Note: mat is [gene x replicate]
-stats.TSPM <- function(data, cls, com, norm.method = "TMM") {
+stats.TSPM <- function(data, cls, com, norm.method = "TMM", ...) {
   ## Get normalisation factors
   norm.method <- match.arg(norm.method, c("DESeq", "TMM", "RLE", "UQ", "none"))
   fac <- norm.factor(data, method = norm.method)
@@ -1057,7 +1039,7 @@ stats.TSPM <- function(data, cls, com, norm.method = "TMM") {
 
   ## call TSPM
   x0 <- rep(1, times = length(grp))
-  res <- TSPM(mat, grp, x0, lib.size = colSums(mat) * nf)
+  res <- TSPM(mat, grp, x0, lib.size = colSums(mat) * nf, ...)
   ## user-defined norm factor
 
   ## names(res)
@@ -1272,24 +1254,6 @@ sig.var <- function(x, pval = "padj", alpha = 0.1) {
 }
 
 ## ------------------------------------------------------------------------
-#' @noRd 
-## wll-09-12-2014: Summary function for NGS vector data
-vec.summ.ngs <- function(x) {
-  res <- c(
-    N = sum(!is.na(x)),
-    N.nonzero = sum(x > 0),
-    Sum = sum(x, na.rm = T),
-    Min = min(x, na.rm = T),
-    Mean = mean(x, na.rm = T),
-    Median = median(x, na.rm = T),
-    Max = max(x, na.rm = T),
-    Std = sd(x, na.rm = T)
-  )
-  res <- round(res, digits = 3)
-  return(res)
-}
-
-## ------------------------------------------------------------------------
 #' TSPM algorithm
 #' @noRd 
 ## wll-02-07-2014: TSPM algorithm
@@ -1319,7 +1283,7 @@ vec.summ.ngs <- function(x) {
 ##  padj:			           a vector containing the p-values after adjusting for
 ##                       multiple testing using the method of
 ##                       Benjamini-Hochberg
-TSPM <- function(counts, x1, x0, lib.size, alpha.wh = 0.05) {
+TSPM <- function(counts, x1, x0, lib.size, alpha.wh = 0.05, ...) {
 
   ## Initializing model parameters
   n <- dim(counts)[1]
@@ -1400,6 +1364,32 @@ TSPM <- function(counts, x1, x0, lib.size, alpha.wh = 0.05) {
 }
 
 ## ------------------------------------------------------------------------
+#' Estimate the sequencing depth
+#' 
+#' Estimate the sequencing depth of each experiment for sequencing data.
+#' 
+#' @param x the original count matrix. p by n matrix of features, one
+#'   observation per column.
+#' @param method normalisation method
+#' @return a normalisation factor
+#' @details use this one to override the original 
+#'   [samr::samr.estimate.depth()] for [stats.SAMseq()].
+#' @examples 
+#' ## 'stats.SAMseq()' use this one to override original one:
+#' assignInNamespace("samr.estimate.depth", samr.estimate.depth, ns = "samr")
+#' @export  
+## wll-23-09-2014: Replace the original samr.estimate.depth. Beware that
+##  argument must be norm.method for keeping consistent with the original one
+##  and passing the argument outside. This function should also been assigned
+##  in the name space.
+samr.estimate.depth <- function(x, method = norm.method) {
+  norm.method <- match.arg(norm.method, c("DESeq", "TMM", "RLE", "UQ", "none"))
+  print(norm.method)
+  fac <- norm.factor(x, method = norm.method)
+  return(fac)
+}
+
+## ------------------------------------------------------------------------
 #' @description `rnaseqdea` provides some functions for RNA-Seq differential
 #'   expression analysis.
 #'
@@ -1450,3 +1440,24 @@ utils::globalVariables(c(
   'Coord1',
   'Coord2'
 ))
+
+##  1) rna_seq_dea
+##  2) rna_seq_stats
+##  3) rna_seq_cl
+##  4) norm.factor
+##  5) vst.rlt.tr
+##  6) stats.edgeR
+##  7) stats.DESeq2
+##  8) stats.NOISeq
+##  9) stats.NBPSeq
+## 10) stats.EBSeq
+## 11) stats.SAMseq
+## 12) stats.voom
+## 13) stats.test
+## 14) stats.TSPM
+## 15) plot_PCA
+## 16) p.adj.f
+## 17) otu.wrapper
+## 18) sig.var
+## 19) TSPM
+## 20) samr.estimate.depth

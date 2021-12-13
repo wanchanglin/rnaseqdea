@@ -8,28 +8,35 @@
 \alias{stats.EBSeq}
 \alias{stats.SAMseq}
 \alias{stats.voom}
-\alias{stats.Wilcox}
+\alias{stats.test}
 \alias{stats.TSPM}
 \alias{stats}
 \title{Wrapper function for RNA-Seq differential expression analysis}
 \usage{
-stats.edgeR(data, cls, com, norm.method = "TMM")
+stats.edgeR(data, cls, com, norm.method = "TMM", ...)
 
-stats.DESeq2(data, cls, com, norm.method = "TMM")
+stats.DESeq2(data, cls, com, norm.method = "TMM", ...)
 
-stats.NOISeq(data, cls, com, norm.method = "TMM")
+stats.NOISeq(data, cls, com, norm.method = "TMM", ...)
 
-stats.NBPSeq(data, cls, com, norm.method = "TMM")
+stats.NBPSeq(data, cls, com, norm.method = "TMM", ...)
 
-stats.EBSeq(data, cls, com, norm.method = "TMM")
+stats.EBSeq(data, cls, com, norm.method = "TMM", ...)
 
-stats.SAMseq(data, cls, com, norm.method = "TMM")
+stats.SAMseq(data, cls, com, norm.method = "TMM", ...)
 
-stats.voom(data, cls, com, norm.method = "TMM")
+stats.voom(data, cls, com, norm.method = "TMM", ...)
 
-stats.Wilcox(data, cls, com, norm.method = "TMM")
+stats.test(
+  data,
+  cls,
+  com,
+  norm.method = "TMM",
+  test.method = "oneway.test",
+  ...
+)
 
-stats.TSPM(data, cls, com, norm.method = "TMM")
+stats.TSPM(data, cls, com, norm.method = "TMM", ...)
 }
 \arguments{
 \item{data}{a data frame with gene x replicate format}
@@ -39,6 +46,11 @@ stats.TSPM(data, cls, com, norm.method = "TMM")
 \item{com}{a character string for comparision}
 
 \item{norm.method}{normalisation method}
+
+\item{...}{further parameters to be passed into modelling}
+
+\item{test.method}{hypothesis testing method for \code{stats.test}, e.g.
+\code{\link[=oneway.test]{oneway.test()}}, \code{\link[=kruskal.test]{kruskal.test()}},  \code{\link[=wilcox.test]{wilcox.test()}}, \code{\link[=t.test]{t.test()}}.}
 }
 \value{
 a list with contents: \itemize{

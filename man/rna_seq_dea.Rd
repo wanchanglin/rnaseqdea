@@ -4,7 +4,15 @@
 \alias{rna_seq_dea}
 \title{RNA-Seq statistical analysis}
 \usage{
-rna_seq_dea(data, cls, com, method = "stats.TSPM", norm.method = "TMM", ep = 0)
+rna_seq_dea(
+  data,
+  cls,
+  com,
+  stats.method = "stats.TSPM",
+  norm.method = "TMM",
+  ep = 0,
+  ...
+)
 }
 \arguments{
 \item{data}{a data frame with gene x replicate format}
@@ -13,13 +21,15 @@ rna_seq_dea(data, cls, com, method = "stats.TSPM", norm.method = "TMM", ep = 0)
 
 \item{com}{a character string for comparision}
 
-\item{method}{statistical analysis methods for RNA-Seq}
+\item{stats.method}{statistical analysis methods for RNA-Seq}
 
 \item{norm.method}{onormalisation method}
 
 \item{ep}{an integer for plotting ellipse. 1 and 2 for plotting overall
 and group ellipse, respectively. Otherwise, none. This is for PCA and
 MDS plot.}
+
+\item{...}{further parameters to \code{stats.method}}
 }
 \value{
 a list with contents: \itemize{
