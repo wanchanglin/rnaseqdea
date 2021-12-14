@@ -1,8 +1,6 @@
 ## Functions for RNA-Seq differential expression analysis
 ## wl-23-06-2014, Mon: Commence
 ## wl-29-06-2019, Sat: Tidy up
-## wl-12-12-2021, Sun: assign samr.estimate.depth in names space for
-##  `stats.SAMseq` 
 
 ## ------------------------------------------------------------------------
 #' RNA-Seq statistical analysis
@@ -230,8 +228,9 @@ rna_seq_stats <- function(mat, grp, nf, method = "mean") {
   mat <- as.data.frame(mat)
 
   ## some statistics (mean, FC, AUC, et. al)
-  stats <- stats.mat(mat, grp, method = method)
-  stats <- stats[, !(names(stats) %in% "pval")]
+  stats <- mt::stats.mat(mat, grp, method = method)
+  ## remove p-values and adjusted p-values
+  stats <- stats[, !(names(stats) %in% c("pval", "padj"))]
 
   return(list(stats = stats, mat = mat))
 }
@@ -812,6 +811,7 @@ stats.EBSeq <- function(data, cls, com, norm.method = "TMM", ...) {
 ## wll-22-09-2014: Wrapper function for SAMseq
 ## wll-17-12-2014: add adjusted p-values with filtering
 ## Note: adjusted p-values with filtering may be not reasonable
+## wl-14-12-2021, Tue: random method which gives different result each time.
 stats.SAMseq <- function(data, cls, com, norm.method = "TMM", ...) {
 
   ## Get normalisation factors
@@ -826,8 +826,6 @@ stats.SAMseq <- function(data, cls, com, norm.method = "TMM", ...) {
   grp <- cls[ind, drop = TRUE]
 
   ## Call SAMseq
-  ## wl-12-12-2021, Sun: put here to override the original one
-  assignInNamespace("samr.estimate.depth", samr.estimate.depth, ns = "samr")
   # set.seed(100)
   res <- samr::SAMseq(
     x = mat, y = grp, resp.type = "Two class unpaired",
@@ -1364,32 +1362,6 @@ TSPM <- function(counts, x1, x0, lib.size, alpha.wh = 0.05, ...) {
 }
 
 ## ------------------------------------------------------------------------
-#' Estimate the sequencing depth
-#' 
-#' Estimate the sequencing depth of each experiment for sequencing data.
-#' 
-#' @param x the original count matrix. p by n matrix of features, one
-#'   observation per column.
-#' @param method normalisation method
-#' @return a normalisation factor
-#' @details use this one to override the original 
-#'   [samr::samr.estimate.depth()] for [stats.SAMseq()].
-#' @examples 
-#' ## 'stats.SAMseq()' use this one to override original one:
-#' assignInNamespace("samr.estimate.depth", samr.estimate.depth, ns = "samr")
-#' @export  
-## wll-23-09-2014: Replace the original samr.estimate.depth. Beware that
-##  argument must be norm.method for keeping consistent with the original one
-##  and passing the argument outside. This function should also been assigned
-##  in the name space.
-samr.estimate.depth <- function(x, method = norm.method) {
-  norm.method <- match.arg(norm.method, c("DESeq", "TMM", "RLE", "UQ", "none"))
-  print(norm.method)
-  fac <- norm.factor(x, method = norm.method)
-  return(fac)
-}
-
-## ------------------------------------------------------------------------
 #' @description `rnaseqdea` provides some functions for RNA-Seq differential
 #'   expression analysis.
 #'
@@ -1460,4 +1432,3 @@ utils::globalVariables(c(
 ## 17) otu.wrapper
 ## 18) sig.var
 ## 19) TSPM
-## 20) samr.estimate.depth
