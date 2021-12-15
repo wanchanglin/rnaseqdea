@@ -23,3 +23,6 @@ a list.
 \description{
 Correct p-value with independent filtering
 }
+\details{
+This function is modified from some code segments from
+}

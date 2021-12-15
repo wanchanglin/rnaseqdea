@@ -70,3 +70,36 @@ Call different methods with normalisation methods
 
 \code{stats.DESeq2} uses \code{\link[DESeq2:nbinomWaldTest]{DESeq2::nbinomWaldTest()}} only.
 }
+\examples{
+library("pasilla")
+dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "pasilla")
+data <- read.table(dn, header = TRUE, row.names = 1, quote = "", comment.char = "")
+keep <- rowSums(data) > 6000
+data <- data[keep, ]
+cls <- c("untreated", "untreated", "untreated", "untreated", 
+         "treated", "treated", "treated")
+cls <- as.factor(cls)
+
+## use DESeq2
+res <- stats.DESeq2(data, cls, com = levels(cls), norm.method = "TMM")
+names(res)     # "stats", "rej.num", "data", "cls", "padjf"
+res$rej.num 
+head(res$stats)
+
+\dontrun{ 
+## use SAMseq
+set.seed(100) 
+res <- stats.test(data, cls, com = levels(cls), norm.method = "RLE") 
+res$rej.num 
+head(res$stats)
+
+## use hypothesis test
+res <- stats.test(data, cls, com = levels(cls), norm.method = "UQ") 
+## change test method
+res <- stats.test(data, cls, com = levels(cls), norm.method = "UQ", 
+                  test.method = wilcox.test)
+res$rej.num
+head(res$stats)
+} 
+
+}

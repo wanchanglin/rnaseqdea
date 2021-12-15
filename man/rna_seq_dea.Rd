@@ -46,3 +46,36 @@ a list with contents: \itemize{
 \description{
 Helper function for RNA-Seq statistical analysis
 }
+\examples{
+library("pasilla")
+dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "pasilla")
+data <- read.table(dn, header = TRUE, row.names = 1, quote = "", comment.char = "")
+cls <- c("untreated", "untreated", "untreated", "untreated", 
+         "treated", "treated", "treated")
+cls <- as.factor(cls)
+
+if (TRUE) {
+  keep <- rowSums(data) > 6000
+} else {
+  ## Filter low expression tags
+  ## cpms <- edgeR::cpm(data)
+  cpms <- t(t(data) / (1e-6 * colSums(data)))
+  keep <- rowSums(cpms > 0.5) >= 2            # from edgeR workfow
+}
+sum(keep)
+data <- data[keep, ]
+
+res <- rna_seq_dea(data, cls, com = levels(cls), stats.method = "stats.edgeR",
+                   norm.method = "DESeq", ep = 2)
+names(res)									 
+head(res$stats)
+res$rej.num
+dim(res$data)
+dim(res$data.s)
+
+res$ma.p
+res$volcano.p
+res$hist.p
+res$mds.p
+res$pca.p
+}

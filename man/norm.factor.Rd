@@ -18,8 +18,20 @@ norm.factor(
 \item{norm.data}{a logical indicating whether normalise data or not}
 }
 \value{
-a list with normalisation factor and normalised data
+a list with normalisation factor and normalised data if \code{norm.data}
+is TRUE othereise an vector of normalisation factor
 }
 \description{
 Calculate normalisation factor
+}
+\examples{
+library("pasilla")
+dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "pasilla")
+data <- read.table(dn, header = TRUE, row.names = 1, quote = "", comment.char = "")
+keep <- rowSums(data) > 6000
+data <- data[keep, ]
+res <- norm.factor(data, norm.data = TRUE)
+res$nf
+head(res$norm.data)
+
 }

@@ -17,5 +17,12 @@ vst.rlt.tr(data, method = c("vst", "rlt"), ...)
 normalised data
 }
 \description{
-Transform count data
+Transform count data. The transformaed data can be used in visulaisation
+and classification.
+}
+\examples{
+library("pasilla")
+dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "pasilla")
+data <- read.table(dn, header = TRUE, row.names = 1, quote = "", comment.char = "")
+res <- vst.rlt.tr(data)  
 }

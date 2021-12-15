@@ -30,6 +30,38 @@
 #' @importFrom lattice xyplot panel.xyplot panel.grid panel.abline histogram
 #'   bwplot 
 #' @importFrom mt panel.elli.1 pca.comp
+#' @examples 
+#' library("pasilla")
+#' dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "pasilla")
+#' data <- read.table(dn, header = TRUE, row.names = 1, quote = "", comment.char = "")
+#' cls <- c("untreated", "untreated", "untreated", "untreated", 
+#'          "treated", "treated", "treated")
+#' cls <- as.factor(cls)
+#' 
+#' if (TRUE) {
+#'   keep <- rowSums(data) > 6000
+#' } else {
+#'   ## Filter low expression tags
+#'   ## cpms <- edgeR::cpm(data)
+#'   cpms <- t(t(data) / (1e-6 * colSums(data)))
+#'   keep <- rowSums(cpms > 0.5) >= 2            # from edgeR workfow
+#' }
+#' sum(keep)
+#' data <- data[keep, ]
+#' 
+#' res <- rna_seq_dea(data, cls, com = levels(cls), stats.method = "stats.edgeR",
+#'                    norm.method = "DESeq", ep = 2)
+#' names(res)									 
+#' head(res$stats)
+#' res$rej.num
+#' dim(res$data)
+#' dim(res$data.s)
+#' 
+#' res$ma.p
+#' res$volcano.p
+#' res$hist.p
+#' res$mds.p
+#' res$pca.p
 ## wll-14-08-2014: NGS count data analysis.
 ## wll-15-08-2014: Return all plots individually.
 ## wll-17-08-2014: Re-write boxplot
@@ -208,34 +240,6 @@ rna_seq_dea <- function(data, cls, com, stats.method = "stats.TSPM",
 }
 
 ## ------------------------------------------------------------------------
-#' Get group stats of normalised RNA-Seq data
-#' 
-#' Get group stats of normalised RNA-Seq data
-#' 
-#' @param mat raw count data with gene x replicate format
-#' @param grp  group information
-#' @param nf  normalisation factor
-#' @param method data centre function
-#' @return a list including stats summary and normalised data set
-#' @export  
-#' @importFrom mt stats.mat
-## wll-17-12-2014: Wrapper function of group stats for normalised NGS data.
-## Also the normalised data is returned.
-rna_seq_stats <- function(mat, grp, nf, method = "mean") {
-  ## Normalise and transpose data
-  ## nf <- nf * (1e-6*colSums(mat))       #' edgeR style
-  mat <- t(mat) / nf
-  mat <- as.data.frame(mat)
-
-  ## some statistics (mean, FC, AUC, et. al)
-  stats <- mt::stats.mat(mat, grp, method = method)
-  ## remove p-values and adjusted p-values
-  stats <- stats[, !(names(stats) %in% c("pval", "padj"))]
-
-  return(list(stats = stats, mat = mat))
-}
-
-## ------------------------------------------------------------------------
 #' Assess feature selection of RNA-Seq data
 #' 
 #' Apply unsupervised and supervised lotting and classification to assess the 
@@ -307,10 +311,20 @@ rna_seq_cl <- function(dat.list, DF, method = c("randomForest", "svm"),
 #' @param data a data frame with gene x replicate format
 #' @param method differential analysis method
 #' @param norm.data a logical indicating whether normalise data or not
-#' @return a list with normalisation factor and normalised data
+#' @return a list with normalisation factor and normalised data if `norm.data` 
+#'   is TRUE othereise an vector of normalisation factor
 #' @importFrom DESeq2 estimateSizeFactorsForMatrix
 #' @importFrom edgeR calcNormFactors
 #' @export 
+#' @examples 
+#' library("pasilla")
+#' dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "pasilla")
+#' data <- read.table(dn, header = TRUE, row.names = 1, quote = "", comment.char = "")
+#' keep <- rowSums(data) > 6000
+#' data <- data[keep, ]
+#' res <- norm.factor(data, norm.data = TRUE)
+#' res$nf
+#' head(res$norm.data)
 #' 
 ## wll-14-08-2014: Get normalisation factors
 ## wll-04-04-2017: DESeq can be replaced by DESeq2.
@@ -361,9 +375,58 @@ norm.factor <- function(data, method = c("DESeq", "TMM", "RLE", "UQ", "none"),
 }
 
 ## ------------------------------------------------------------------------
+#' Get group stats of normalised RNA-Seq data
+#' 
+#' Get group stats of normalised RNA-Seq data
+#' 
+#' @param mat raw count data with gene x replicate format
+#' @param grp  group information
+#' @param nf  normalisation factor
+#' @param method data centre function
+#' @return a list including stats summary and normalised data set
+#' @details The sammary is based on the normalised data, excluding p-values 
+#'   and their corrections. The p-values are computed by different modelling 
+#'   methods such as `DEseq2` and `edgeR`.
+#' @export  
+#' @importFrom mt stats.mat
+#' @examples 
+#' library("pasilla")
+#' dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "pasilla")
+#' data <- read.table(dn, header = TRUE, row.names = 1, quote = "", comment.char = "")
+#' keep <- rowSums(data) > 6000
+#' data <- data[keep, ]
+#' cls <- c("untreated", "untreated", "untreated", "untreated", 
+#'          "treated", "treated", "treated")
+#' cls <- as.factor(cls)
+#' 
+#' ## get the normalisation factor
+#' nf <- norm.factor(data)
+#' 
+#' ## get summary on normalised data
+#' res <- rna_seq_stats(data,grp = cls, nf = nf)
+#' names(res)
+#' head(res$stats)
+## wll-17-12-2014: Wrapper function of group stats for normalised NGS data.
+## Also the normalised data is returned.
+rna_seq_stats <- function(mat, grp, nf, method = "mean") {
+  ## Normalise and transpose data
+  ## nf <- nf * (1e-6*colSums(mat))       #' edgeR style
+  mat <- t(mat) / nf
+  mat <- as.data.frame(mat)
+
+  ## some statistics (mean, FC, AUC, et. al)
+  stats <- mt::stats.mat(mat, grp, method = method)
+  ## remove p-values and adjusted p-values
+  stats <- stats[, !(names(stats) %in% c("pval", "padj"))]
+
+  return(list(stats = stats, mat = mat))
+}
+
+## ------------------------------------------------------------------------
 #' Transform count data
 #' 
-#' Transform count data
+#' Transform count data. The transformaed data can be used in visulaisation 
+#' and classification.
 #' 
 #' @param data a data frame with gene x replicate format
 #' @param method two normalisation method `vst` and `rst`
@@ -371,7 +434,11 @@ norm.factor <- function(data, method = c("DESeq", "TMM", "RLE", "UQ", "none"),
 #' @return normalised data
 #' @importFrom DESeq2 varianceStabilizingTransformation rlog
 #' @export 
-#'  
+#' @examples 
+#' library("pasilla")
+#' dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "pasilla")
+#' data <- read.table(dn, header = TRUE, row.names = 1, quote = "", comment.char = "")
+#' res <- vst.rlt.tr(data)  
 ## wll-01-12-2014: Transform count data by  two methods:
 ##  Variance stabilizing transformation (VST) and Regularized log
 ##  transformation (RLT) implemented in package DESeq2. The transformed data
@@ -413,6 +480,38 @@ vst.rlt.tr <- function(data, method = c("vst", "rlt"), ...) {
 #'   \item padjf p-values, adjusted p-values and adjusted p-values with
 #'   filtering
 #' }
+#' @examples 
+#' library("pasilla")
+#' dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "pasilla")
+#' data <- read.table(dn, header = TRUE, row.names = 1, quote = "", comment.char = "")
+#' keep <- rowSums(data) > 6000
+#' data <- data[keep, ]
+#' cls <- c("untreated", "untreated", "untreated", "untreated", 
+#'          "treated", "treated", "treated")
+#' cls <- as.factor(cls)
+#' 
+#' ## use DESeq2
+#' res <- stats.DESeq2(data, cls, com = levels(cls), norm.method = "TMM")
+#' names(res)     # "stats", "rej.num", "data", "cls", "padjf"
+#' res$rej.num 
+#' head(res$stats)
+#'
+#' \dontrun{ 
+#' ## use SAMseq
+#' set.seed(100) 
+#' res <- stats.test(data, cls, com = levels(cls), norm.method = "RLE") 
+#' res$rej.num 
+#' head(res$stats)
+#' 
+#' ## use hypothesis test
+#' res <- stats.test(data, cls, com = levels(cls), norm.method = "UQ") 
+#' ## change test method
+#' res <- stats.test(data, cls, com = levels(cls), norm.method = "UQ", 
+#'                   test.method = wilcox.test)
+#' res$rej.num
+#' head(res$stats)
+#' } 
+#' 
 #' @name stats
 NULL
 
@@ -945,7 +1044,6 @@ stats.voom <- function(data, cls, com, norm.method = "TMM", ...) {
 #' @export  
 #' @rdname stats
 #' @order 8
-#' 
 ## wll-13-08-2014: Wrapper function for statistical hypothesis test
 ## wll-06-01-2015: minor changes.
 ## wl-13-12-2021, Mon: change names from 'stats.Wicox' and add 'test.method'
@@ -1083,175 +1181,6 @@ stats.TSPM <- function(data, cls, com, norm.method = "TMM", ...) {
 }
 
 ## ------------------------------------------------------------------------
-#' Plot PCA of count data
-#' 
-#' Plot PCA of count datasizeFactors<-
-#' 
-#' @param x data set for plotting
-#' @param intgroup  interesting groups: a character vector of names in
-#'    colData(x) to use for grouping
-#' @param ntop number of top genes to use for principal components, selected 
-#'   by highest row variance
-#' @param returnData should the function only return the data.frame of PC1 
-#'   and PC2 with intgroup covariates for custom plotting (default is FALSE)
-#' @param select,sample select which samplr for plotting
-#' @return a plot
-#' @export  
-#' @import SummarizedExperiment
-#' @importFrom genefilter rowVars
-#' @importFrom ggplot2 ggplot aes_string  geom_point xlab ylab
-## wll-26-11-2014:  Modify DESeq2's plotPCA: add argument select.
-plot_PCA <- function(x, intgroup = "condition", ntop = 500, 
-                     returnData = FALSE, select, sample) {
-
-  ## wll-26-11-2014: modification goes here.
-  if (missing(select)) {
-    ## calculate the variance for each gene
-    rv <- genefilter::rowVars(assay(x)) ## wll: add genefilter
-    ## select the ntop genes by variance
-    select <- order(rv, decreasing = TRUE)[seq_len(min(ntop, length(rv)))]
-  }
-
-  ## perform a PCA on the data in assay(x) for the selected genes
-  if (missing(sample)) {
-    pca <- prcomp(t(assay(x)[select, ]))
-  } else {
-    pca <- prcomp(t(assay(x)[select, sample]))
-  }
-
-  ## the contribution to the total variance for each component
-  percentVar <- pca$sdev^2 / sum(pca$sdev^2)
-
-  if (!all(intgroup %in% names(colData(x)))) {
-    stop("the argument 'intgroup' should specify columns of colData(dds)")
-  }
-
-  ## add the intgroup factors together to create a new grouping factor
-  intgroup.df <- as.data.frame(colData(x)[, intgroup, drop = FALSE])
-  group <- factor(apply(intgroup.df, 1, paste, collapse = " : "))
-
-  ## assembly the data for the plot
-  d <- data.frame(PC1 = pca$x[, 1], PC2 = pca$x[, 2], group = group, 
-                  intgroup.df, names = colnames(x))
-
-  if (returnData) {
-    attr(d, "percentVar") <- percentVar[1:2]
-    return(d)
-  }
-
-  ggplot(data = d, aes_string(x = "PC1", y = "PC2", color = "group")) +
-    geom_point(size = 3) +
-    xlab(paste0("PC1: ", round(percentVar[1] * 100), "% variance")) +
-    ylab(paste0("PC2: ", round(percentVar[2] * 100), "% variance"))
-}
-
-## ------------------------------------------------------------------------
-#' Correct p-value with independent filtering
-#' 
-#' Correct p-value with independent filtering
-#' 
-#' @param pval an vector of p-calues
-#' @param filter.stat  A vector of stage-one filter statistics, or a function
-#'   which is able to compute this vector from data, if data is supplied. See 
-#'   [genefilter::filtered_p()].
-#' @param alpha p-values threshold for selection
-#' @param method p-calue correction method
-#' @return a list.
-#' @export
-#' @importFrom genefilter filtered_p
-## wll-17-12-2014: Correct p-value with independent filtering.
-## wll-06-01-2015: Each NGS wrapper function calls this function.
-## Note: This function is modified from some code segments from
-##       R/Biocondunctor 'DESeq2' and 'genefilter'.
-p.adj.f <- function(pval, filter.stat, alpha = 0.1, method = "BH") {
-  ## Probabilities for calculating quantiles which are used as cutoff points
-  ## for filtering.
-  theta <- seq(0, 0.95, by = 0.05)
-  ## call genefilter's filtered_p
-  padj <- genefilter::filtered_p(
-    filter = filter.stat, test = pval, theta = theta,
-    method = method
-  )
-  ## get rejection number
-  rej <- colSums(padj < alpha, na.rm = TRUE)
-
-  ## select the maximum rejection number
-  if (T) { ## use the last tie
-    ind <- max.col(t(as.matrix(rej)), ties.method = "last")
-  } else {
-    ind <- which.max(rej) ## only use the first tie
-  }
-  ## the final choice
-  padj.f <- padj[, ind, drop = TRUE]
-
-  ## get filtering cutoffs
-  cutoff <- quantile(filter.stat, theta)
-  cutoff.f <- cutoff[ind]
-
-  list(
-    padj.f = padj.f, cutoff.f = cutoff.f, cutoff = cutoff,
-    rej = rej, padj = cbind(raw = pval, padj)
-  )
-}
-
-## ------------------------------------------------------------------------
-#' Get OTUs table
-#' 
-#' Get OTUs table
-#' 
-#' @param res results from differential analysys
-#' @param pval select which type of p-value to be used
-#' @param alpha the threshold for p-value
-#' @return a list with some results
-#' @export 
-## wll-11-12-2014: Wrapper function to get OTUs table
-## wll-03-02-2015: Fixed a bug for NAs
-## wl-10-12-2021, Fri: make sure 'reshape2' works
-## to-do: frequency of each OTU identified.
-otu.wrapper <- function(res, pval = "padj", alpha = 0.1) {
-  ## get otus
-  otu <- lapply(res, function(x) sig.var(x$res, pval, alpha))
-  otu <- otu[!is.na(otu)]
-  ## wll-03-02-2015:  remove NAs before melting. should be a efficient and
-  ## general method to shrink list. My version of shrink.list in mt has
-  ## problem since recent version of R.
-
-  ## get contingency tables
-  tmp <- melt(otu)
-  ## remove NAs if any
-  ## tmp <- tmp[complete.cases(tmp),]
-
-  otu_num <- dcast(tmp, L1 ~ ., value = "value")
-  names(otu_num) <- c("design", "otu_number")
-
-  otu_tab <- dcast(tmp, value ~ L1)
-  names(otu_tab)[1] <- "otu"
-
-  ## summary of OTUs table
-  otu_all <- do.call("c", otu)
-  otu_tab_summ <- table(otu_all)
-  otu_freq <- as.data.frame(table(otu_tab_summ))
-
-  list(otu_tab = otu_tab, otu_num = otu_num, otu_freq = otu_freq)
-}
-
-## ------------------------------------------------------------------------
-#' @noRd 
-## wll-10-12-2014: get significant features (i.e. genes or OTUs)
-sig.var <- function(x, pval = "padj", alpha = 0.1) {
-  ## order stats
-  stats <- x[order(x[[pval]]), ]
-  idx <- which(stats[[pval]] <= alpha)
-  if (length(idx) != 0) {
-    tmp <- stats[idx, pval, drop = F]
-    var <- rownames(tmp)
-    return(var)
-  } else {
-    return(NA)
-  }
-}
-
-## ------------------------------------------------------------------------
 #' TSPM algorithm
 #' @noRd 
 ## wll-02-07-2014: TSPM algorithm
@@ -1362,6 +1291,55 @@ TSPM <- function(counts, x1, x0, lib.size, alpha.wh = 0.05, ...) {
 }
 
 ## ------------------------------------------------------------------------
+#' Correct p-value with independent filtering
+#' 
+#' Correct p-value with independent filtering
+#' 
+#' @param pval an vector of p-calues
+#' @param filter.stat  A vector of stage-one filter statistics, or a function
+#'   which is able to compute this vector from data, if data is supplied. See 
+#'   [genefilter::filtered_p()].
+#' @param alpha p-values threshold for selection
+#' @param method p-calue correction method
+#' @return a list.
+#' @export
+#' @importFrom genefilter filtered_p
+#' @details This function is modified from some code segments from
+##    `DESeq2` and `genefilter`.
+## wll-17-12-2014: Correct p-value with independent filtering.
+## wll-06-01-2015: Each NGS wrapper function calls this function.
+p.adj.f <- function(pval, filter.stat, alpha = 0.1, method = "BH") {
+  ## Probabilities for calculating quantiles which are used as cutoff points
+  ## for filtering.
+  theta <- seq(0, 0.95, by = 0.05)
+  ## call genefilter's filtered_p
+  padj <- genefilter::filtered_p(
+    filter = filter.stat, test = pval, theta = theta,
+    method = method
+  )
+  ## get rejection number
+  rej <- colSums(padj < alpha, na.rm = TRUE)
+
+  ## select the maximum rejection number
+  if (T) { ## use the last tie
+    ind <- max.col(t(as.matrix(rej)), ties.method = "last")
+  } else {
+    ind <- which.max(rej) ## only use the first tie
+  }
+  ## the final choice
+  padj.f <- padj[, ind, drop = TRUE]
+
+  ## get filtering cutoffs
+  cutoff <- quantile(filter.stat, theta)
+  cutoff.f <- cutoff[ind]
+
+  list(
+    padj.f = padj.f, cutoff.f = cutoff.f, cutoff = cutoff,
+    rej = rej, padj = cbind(raw = pval, padj)
+  )
+}
+
+## ------------------------------------------------------------------------
 #' @description `rnaseqdea` provides some functions for RNA-Seq differential
 #'   expression analysis.
 #'
@@ -1414,8 +1392,8 @@ utils::globalVariables(c(
 ))
 
 ##  1) rna_seq_dea
-##  2) rna_seq_stats
-##  3) rna_seq_cl
+##  2) rna_seq_cl
+##  3) rna_seq_stats
 ##  4) norm.factor
 ##  5) vst.rlt.tr
 ##  6) stats.edgeR
@@ -1427,8 +1405,5 @@ utils::globalVariables(c(
 ## 12) stats.voom
 ## 13) stats.test
 ## 14) stats.TSPM
-## 15) plot_PCA
+## 15) TSPM
 ## 16) p.adj.f
-## 17) otu.wrapper
-## 18) sig.var
-## 19) TSPM

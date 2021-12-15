@@ -21,3 +21,26 @@ a list including stats summary and normalised data set
 \description{
 Get group stats of normalised RNA-Seq data
 }
+\details{
+The sammary is based on the normalised data, excluding p-values
+and their corrections. The p-values are computed by different modelling
+methods such as \code{DEseq2} and \code{edgeR}.
+}
+\examples{
+library("pasilla")
+dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "pasilla")
+data <- read.table(dn, header = TRUE, row.names = 1, quote = "", comment.char = "")
+keep <- rowSums(data) > 6000
+data <- data[keep, ]
+cls <- c("untreated", "untreated", "untreated", "untreated", 
+         "treated", "treated", "treated")
+cls <- as.factor(cls)
+
+## get the normalisation factor
+nf <- norm.factor(data)
+
+## get summary on normalised data
+res <- rna_seq_stats(data,grp = cls, nf = nf)
+names(res)
+head(res$stats)
+}
