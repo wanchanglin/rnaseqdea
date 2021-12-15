@@ -8,7 +8,7 @@ rna_seq_dea(
   data,
   cls,
   com,
-  stats.method = "stats.TSPM",
+  stats.method = "stats_TSPM",
   norm.method = "TMM",
   ep = 0,
   ...
@@ -65,7 +65,7 @@ if (TRUE) {
 sum(keep)
 data <- data[keep, ]
 
-res <- rna_seq_dea(data, cls, com = levels(cls), stats.method = "stats.edgeR",
+res <- rna_seq_dea(data, cls, com = levels(cls), stats.method = "stats_edgeR",
                    norm.method = "DESeq", ep = 2)
 names(res)									 
 head(res$stats)

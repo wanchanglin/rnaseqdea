@@ -6,22 +6,47 @@
 \alias{rnaseqdea-package}
 \title{rnaseqdea: RNA-Seq Differential Expression Analysis (rnaseqdea)}
 \description{
-\code{rnaseqdea} provides some functions for RNA-Seq differential
-expression analysis.
+\code{rnaseqdea} provides functions for RNA-Seq differential expression analysis.
+It implements wrapper functions to call differential statistical
+models to perform analysis. This package also provides a unified
+normalisation methods for all used modelling methods. Some plots are
+implemented for these modelling.
 }
-\section{Main functions}{
+\section{Wrapper functions for statistical analysis methods}{
 
-The main mtExtra provides more functions for metabolomics data analysis.
-These functions are statistical analysis and plot methods with \code{ggplot2}
-and \code{lattice}. It uses \code{tidyverse} as well as \code{reshape2} and \code{plyr}
-packages.
+\itemize{
+\item DESeq2
+\item edgeR
+\item NBPSeq
+\item EBSeq
+\item NOISeq
+\item SAMseq
+\item voom+limma
+\item TSPM
+\item hypothesis testing
+}
 }
 
-\section{Package context}{
+\section{Normalisation methods}{
 
-This package follows the principles of the "tidyverse" as mush as possible.
-It also uses \code{melt} in \code{reshape2} if \code{tidyr} is complicated in some
-circumstances.
+\itemize{
+\item Normal factor: \code{DESeq}, \code{TMM}, \code{RLE}, \code{UQ}. Use for modelling.
+\item Variance stabilizing transformation (VST) and Regularized log
+transformation (RLT) implemented in package \code{DESeq2}.  Use for the
+classification and visualisation.
+}
+}
+
+\section{Plots}{
+
+\itemize{
+\item MA plot
+\item Volcano plot
+\item Histogram of p-values
+\item PCA plot
+\item MDS plot
+\item Boxplot
+}
 }
 
 \seealso{

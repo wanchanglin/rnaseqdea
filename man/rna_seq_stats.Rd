@@ -37,7 +37,7 @@ cls <- c("untreated", "untreated", "untreated", "untreated",
 cls <- as.factor(cls)
 
 ## get the normalisation factor
-nf <- norm.factor(data)
+nf <- norm_factor(data)
 
 ## get summary on normalised data
 res <- rna_seq_stats(data,grp = cls, nf = nf)

@@ -2,7 +2,7 @@ Package: rnaseqdea
 Title: RNA-Seq Differential Expression Analysis (rnaseqdea)
 Date: 2021-12-09
 Type: Package
-Version: 0.1.0
+Version: 0.1.1
 Author: Wanchang Lin
 Maintainer: Wanchang Lin <wanchanglin@hotmail.com>
 Description: 
@@ -17,5 +17,5 @@ LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
 Depends: R (>= 3.0.0)
-Imports: rlang, reshape2, ggplot2, mt, lattice, ellipse, magrittr, 
-  limma, genefilter, DESeq2, edgeR, NBPSeq, EBSeq, NOISeq, samr, pasilla
+Imports: rlang, reshape2, mt, lattice, ellipse, limma, genefilter, DESeq2, 
+  edgeR, NBPSeq, EBSeq, NOISeq, samr, pasilla
