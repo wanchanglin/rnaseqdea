@@ -27,8 +27,8 @@ and their corrections. The p-values are computed by different modelling
 methods such as \code{DEseq2} and \code{edgeR}.
 }
 \examples{
-library("pasilla")
-dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "pasilla")
+## data set from R package 'pasilla' 
+dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "rnaseqdea")
 data <- read.table(dn, header = TRUE, row.names = 1, quote = "", comment.char = "")
 keep <- rowSums(data) > 6000
 data <- data[keep, ]

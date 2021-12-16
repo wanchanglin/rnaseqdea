@@ -13,9 +13,8 @@ License: GPL (>= 2)
 URL: https://github.com/wanchanglin/rnaseqdea
 BugReports: https://github.com/wanchanglin/rnaseqdea/issues
 Encoding: UTF-8
-LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
 Depends: R (>= 3.0.0)
 Imports: rlang, reshape2, mt, lattice, ellipse, limma, genefilter, DESeq2, 
-  edgeR, NBPSeq, EBSeq, NOISeq, samr, pasilla
+  edgeR, NBPSeq, EBSeq, NOISeq, samr

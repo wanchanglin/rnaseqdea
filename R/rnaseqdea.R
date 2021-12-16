@@ -31,8 +31,8 @@
 #'   bwplot 
 #' @importFrom mt panel.elli.1 pca.comp
 #' @examples 
-#' library("pasilla")
-#' dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "pasilla")
+#' ## data set from R package 'pasilla' 
+#' dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "rnaseqdea")
 #' data <- read.table(dn, header = TRUE, row.names = 1, quote = "", comment.char = "")
 #' cls <- c("untreated", "untreated", "untreated", "untreated", 
 #'          "treated", "treated", "treated")
@@ -148,7 +148,7 @@ rna_seq_dea <- function(data, cls, com, stats.method = "stats_TSPM",
   res$volcano.p <- volcano.p
   res$hist.p <- hist.p
 
-  ## Get reduced data according to p-values less than threshold (0.005)
+  ## Get reduced data according to p-values less than threshold (0.05)
   pval <- res$stats[, "pval", drop = T]
   names(pval) <- rownames(res$stats)
   ind <- pval <= 0.05
@@ -255,8 +255,8 @@ rna_seq_dea <- function(data, cls, com, stats.method = "stats_TSPM",
 #' @export  
 #' @importFrom mt stats.mat
 #' @examples 
-#' library("pasilla")
-#' dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "pasilla")
+#' ## data set from R package 'pasilla' 
+#' dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "rnaseqdea")
 #' data <- read.table(dn, header = TRUE, row.names = 1, quote = "", comment.char = "")
 #' keep <- rowSums(data) > 6000
 #' data <- data[keep, ]
@@ -301,8 +301,8 @@ rna_seq_stats <- function(mat, grp, nf, method = "mean") {
 #' @importFrom edgeR calcNormFactors
 #' @export 
 #' @examples 
-#' library("pasilla")
-#' dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "pasilla")
+#' ## data set from R package 'pasilla' 
+#' dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "rnaseqdea")
 #' data <- read.table(dn, header = TRUE, row.names = 1, quote = "", comment.char = "")
 #' keep <- rowSums(data) > 6000
 #' data <- data[keep, ]
@@ -371,8 +371,8 @@ norm_factor <- function(data, method = c("DESeq", "TMM", "RLE", "UQ", "none"),
 #' @importFrom DESeq2 varianceStabilizingTransformation rlog
 #' @export 
 #' @examples 
-#' library("pasilla")
-#' dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "pasilla")
+#' ## data set from R package 'pasilla' 
+#' dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "rnaseqdea")
 #' data <- read.table(dn, header = TRUE, row.names = 1, quote = "", comment.char = "")
 #' res <- vst_rlt_tr(data)  
 ## wll-01-12-2014: Transform count data by  two methods:
@@ -413,8 +413,8 @@ vst_rlt_tr <- function(data, method = c("vst", "rlt"), ...) {
 #' @details This function is modified from some code segments from
 ##    `DESeq2` and `genefilter`.
 #' @examples 
-#' library("pasilla")
-#' dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "pasilla")
+#' ## data set from R package 'pasilla' 
+#' dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "rnaseqdea")
 #' data <- read.table(dn, header = TRUE, row.names = 1, quote = "", comment.char = "")
 #' keep <- rowSums(data) > 6000
 #' data <- data[keep, ]
@@ -490,8 +490,8 @@ p_adj_f <- function(pval, filter.stat, alpha = 0.1, method = "BH") {
 #'   filtering
 #' }
 #' @examples 
-#' library("pasilla")
-#' dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "pasilla")
+#' ## data set from R package 'pasilla' 
+#' dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "rnaseqdea")
 #' data <- read.table(dn, header = TRUE, row.names = 1, quote = "", comment.char = "")
 #' keep <- rowSums(data) > 6000
 #' data <- data[keep, ]
@@ -499,26 +499,26 @@ p_adj_f <- function(pval, filter.stat, alpha = 0.1, method = "BH") {
 #'          "treated", "treated", "treated")
 #' cls <- as.factor(cls)
 #' 
-#' ## use DESeq2
-#' res <- stats_DESeq2(data, cls, com = levels(cls), norm.method = "TMM")
+#' ## use edgeR
+#' res <- stats_edgeR(data, cls, com = levels(cls), norm.method = "TMM")
 #' names(res)     # "stats", "rej.num", "data", "cls", "padjf"
 #' res$rej.num 
 #' head(res$stats)
 #'
 #' \dontrun{ 
+#' ## use DESeq2
+#' res <- stats_DESeq2(data, cls, com = levels(cls), norm.method = "DESeq")
+#' 
 #' ## use SAMseq
 #' set.seed(100) 
 #' res <- stats_test(data, cls, com = levels(cls), norm.method = "RLE") 
-#' res$rej.num 
-#' head(res$stats)
 #' 
 #' ## use hypothesis test
 #' res <- stats_test(data, cls, com = levels(cls), norm.method = "UQ") 
+#' 
 #' ## change test method
 #' res <- stats_test(data, cls, com = levels(cls), norm.method = "UQ", 
 #'                   test.method = wilcox.test)
-#' res$rej.num
-#' head(res$stats)
 #' } 
 #' 
 #' @name stats
@@ -1330,7 +1330,7 @@ rna_seq_cl <- function(dat.list, DF, method = c("randomForest", "svm"),
   ## PCA and PLS plot
   pca <- pca.plot.wrap(dat.list,
     title = DF, par.strip.text = list(cex = 0.75),
-    scales = list(cex = .75, relation = "free"), ep = ep
+    scales = list(cex = .75, relation = "same"), ep = ep
   ) ## free
   pls <- pls.plot.wrap(dat.list,
     title = DF, par.strip.text = list(cex = 0.75),

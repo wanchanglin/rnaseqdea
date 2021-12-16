@@ -47,8 +47,8 @@ a list with contents: \itemize{
 Helper function for RNA-Seq statistical analysis
 }
 \examples{
-library("pasilla")
-dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "pasilla")
+## data set from R package 'pasilla' 
+dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "rnaseqdea")
 data <- read.table(dn, header = TRUE, row.names = 1, quote = "", comment.char = "")
 cls <- c("untreated", "untreated", "untreated", "untreated", 
          "treated", "treated", "treated")

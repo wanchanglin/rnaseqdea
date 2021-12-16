@@ -21,8 +21,8 @@ Transform count data. The transformaed data can be used in visulaisation
 and classification.
 }
 \examples{
-library("pasilla")
-dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "pasilla")
+## data set from R package 'pasilla' 
+dn <- system.file("extdata/pasilla_gene_counts.tsv", package = "rnaseqdea")
 data <- read.table(dn, header = TRUE, row.names = 1, quote = "", comment.char = "")
 res <- vst_rlt_tr(data)  
 }
