@@ -1323,7 +1323,7 @@ stats_test <- function(data, cls, com, norm.method = "TMM",
 ## @export 
 ## wll-03-12-2014: Assess feature selection of NGS: PCA plot, PLS plot and
 ##  classification.
-rna_seq_cl <- function(dat.list, DF, method = c("randomForest", "svm"),
+rna_seq_cl <- function(dat.list, DF = "", method = c("randomForest", "svm"),
                        pars = valipars(sampling = "cv", niter = 20, 
                                        nreps = 5, strat = TRUE), ep =0) {
 

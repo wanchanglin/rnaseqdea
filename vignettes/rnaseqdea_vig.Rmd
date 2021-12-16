@@ -1,0 +1,342 @@
+---
+title: "Comparison of RNA-Seq differential analysis using rnaseqdea"
+author: "Wanchang Lin"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Comparison of RNA-Seq differential analysis using rnaseqdea}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+---
+
+
+```{r common, include=F}
+knitr::opts_chunk$set(collapse = FALSE, 
+                      messages = FALSE,
+                      warning = FALSE,
+                      cache = FALSE, 
+                      comment = "#>",
+                      fig.width = 7, fig.height = 7, 
+                      fig.align = "center")
+pkgs <- c("mt", "lattice", "latticeExtra", "rnaseqdea", "reshape2")
+invisible(lapply(pkgs, library, character.only = TRUE))
+```
+
+
+## Introduction
+
+The R package `rnaseqdea` provides a frame work to call popular RNA-Seq 
+differential analysis models like `DESeq2` and `edgeR`. It is easy to 
+compare these methods based on identified significant genes, visualisation 
+and discrimination. Since the normalisation has impact on the analysis 
+results, the normalisation methods provided by `DESeq2` and `edgeR` also
+have been implemented to be used by other methods. This vignette uses a 
+example data set to show how to compare with different statistical 
+analysis methods and normalisation methods.
+
+## Prepare data set
+
+Load the data set: data and meta
+
+```{r }
+load(system.file("extdata/vig_data.rda", package = "rnaseqdea"))
+```
+
+
+Filter low expression tags
+
+```{r }
+cpms <- t(t(data) / (1e-6 * colSums(data)))
+keep <- rowSums(cpms > 0.5) >= 2
+sum(keep)
+data <- data[keep, ]
+```
+
+group information
+
+```{r }
+cls <- factor(meta$Treatment)
+cls
+```
+
+comparison of group 
+
+```{r }
+com <- levels(cls)
+com
+```
+
+
+## RNA-Seq analysis
+
+We select four modelling methods and four normalisation methods for
+comparison.  
+
+
+```{r }
+s.meth <- c("stats_DESeq2", "stats_edgeR", "stats_TSPM", "stats_voom")
+n.meth <- c("DESeq", "TMM", "RLE", "UQ")
+
+res <- lapply(s.meth, function(i) {
+  cat("\n--Stat = :", i)
+  flush.console()
+  tmp <- lapply(n.meth, function(j) {
+    cat("\n----Norm = :", j)
+    flush.console()
+    rna_seq_dea(data, cls = cls, com = com, stats.method = i, norm.method = j)
+  })
+  names(tmp) <- n.meth
+  tmp
+})
+names(res) <- s.meth
+```
+
+
+## Results: Tables
+
+Get stats and rej.num
+
+```{r }
+tab <- lapply(res, function(x) lapply(x, function(y) y[c("stats")]))
+names(tab) <- gsub("^.*?\\.(.*)", "\\1", names(tab), perl = TRUE)
+tab <- un.list(tab)
+tab <- lapply(tab, as.data.frame)
+```
+
+get reject number
+
+```{r }
+rej <- lapply(res, function(x) lapply(x, function(y) y[c("rej.num")]))
+rej <- un.list(rej)
+names(rej) <- gsub("_rej\\.num", "", names(rej))
+names(rej) <- gsub("stats\\.", "", names(rej))
+rej <- lapply(rej, as.data.frame)
+rej <- do.call("rbind", rej)
+```
+
+get 0.05 reject number
+
+```{r }
+ind005 <- grep("0\\.05", rownames(rej))
+ind001 <- grep("0\\.01", rownames(rej))
+ind01 <- grep("0\\.1", rownames(rej))
+```
+
+sort rej by threshold
+
+```{r }
+rej.ord <- rej[c(ind001, ind005, ind01), ]
+rej.ord
+```
+
+
+## Results: Plots
+
+All plots below are based on the normalised data using normal factors.
+
+### PCA plot
+
+```{r }
+pca <- lapply(res, function(x) {
+  tmp <- lapply(x, function(y) {
+    y$pca
+  })
+  # purrr::compact(tmp)
+})
+
+pca <- reshape2::melt(pca, id = c("PC1", "PC2", "cls"))
+
+names(pca) <- c("PC1", "PC2", "cls", "norm", "stat")
+pca$stat <- gsub("^.*?\\.(.*)", "\\1", pca$stat, perl = TRUE)
+
+pca.p <-
+  useOuterStrips(
+    xyplot(PC1 ~ PC2 | stat + norm,
+      data = pca, groups = cls, as.table = T,
+      xlab = "PC2", ylab = "PC1", main = "PCA Plot",
+      auto.key = list(space = "right"),
+      par.settings = list(superpose.symbol = list(pch = rep(1:25))),
+        panel = function(x, y, ...) {
+          panel.xyplot(x, y, ...)
+          panel.elli.1(x, y, ...)
+        }, ep = 0,
+      scales = list(cex = .75, relation = "free")
+    )
+  )
+pca.p
+```
+
+### MDS Plot
+
+```{r }
+mds <- lapply(res, function(x) {
+  tmp <- lapply(x, function(y) {
+    y$mds
+  })
+  # purrr::compact(tmp)
+})
+mds <- reshape2::melt(mds, id = c("Coord1", "Coord2", "cls"))
+names(mds) <- c("Coord1", "Coord2", "cls", "norm", "stat")
+mds$stat <- gsub("^.*?\\.(.*)", "\\1", mds$stat, perl = TRUE)
+
+mds.p <-
+  useOuterStrips(
+    xyplot(Coord1 ~ Coord2 | stat + norm,
+      data = mds, groups = cls, as.table = T,
+      xlab = "Coordinate 2", ylab = "Coordinate 1", 
+      main = "MDS Plot",
+      auto.key = list(space = "right"),
+      par.settings = list(superpose.symbol = list(pch = rep(1:25))),
+        panel = function(x, y, ...) {
+          panel.xyplot(x, y, ...)
+          panel.elli.1(x, y, ...)
+        }, ep = 0,
+      scales = list(cex = .75, relation = "free")
+    )
+  )
+mds.p
+```
+
+### MA plot
+
+```{r }
+ind <- c("mean", "log2.fold.change", "pval", "padj")
+tab <- lapply(res, function(x) {
+  tmp <- lapply(x, function(y) {
+    y$stats[, ind]
+  })
+})
+tab <- reshape2::melt(tab, id = ind) 
+names(tab) <- c(ind, "norm", "stat")
+tab$stat <- gsub("^.*?\\.(.*)", "\\1", tab$stat, perl = TRUE)
+
+ma.p <-
+  useOuterStrips(
+    xyplot(log2.fold.change ~ mean | stat + norm,
+      data = tab, as.table = T,
+      pch = 16, cex = .5,
+      col = ifelse(tab$padj < .1, "#FF000040", "black"),
+      panel = function(x, y, subscripts, col, ...) {
+        panel.xyplot(x, y, col = col[subscripts], ...)
+        # panel.loess(x, y, col="green",...)
+        # panel.lmline(x, y, col="red",...)
+        panel.grid(h = -1, v = 2)
+        panel.abline(h = c(-2, 2), col = "blue", lty = 2)
+      },
+      xlab = "mean", ylab = "log2 fold change",
+      main = "MA Plot",
+      scales = list(
+        x = list(log = TRUE), y = list(log = FALSE, limits = c(-6, 6)),
+        cex = .75, relation = "same"
+      )
+    )
+  )
+ma.p
+```
+
+### Volcano plot
+
+```{r }
+v.p <-
+  useOuterStrips(
+    xyplot(-log10(pval) ~ log2.fold.change | stat + norm,
+      data = tab, as.table = T,
+      pch = 16, cex = .5,
+      col = ifelse(abs(tab$log2.fold.change) > 2 & tab$pval < 0.05, 
+                   "#FF000050", "#00000050"),
+      panel = function(x, y, subscripts, col, ...) {
+        panel.xyplot(x, y, col = col[subscripts], ...)
+        panel.grid(h = -1, v = 2)
+        panel.abline(v = c(-2, 2), h = -log10(0.05), col = "blue", lty = 2)
+      },
+      scales = list(cex = .75, relation = "same"),
+      main = "Volcano Plot",
+      xlab = "log2(Fold Change)", ylab = "-log10(P-value)"
+    )
+  )
+v.p
+```
+
+### Histogram of p-values
+
+```{r }
+h.p <-
+  useOuterStrips(
+    histogram(~ pval | stat + norm,
+      data = tab, as.table = T,
+      type = "count", nint = 100,
+      scales = list(cex = .75, relation = "same", y = list(limits = c(0, 30))),
+      main = "Histogram of p-values"
+    )
+  )
+h.p
+```
+
+
+## Classification and visualisation by PCA and PLS
+
+Prepare highly expressed data set for classification analysis.
+
+
+```{r }
+## Transform the raw count data by `vst`
+data.tr <- vst_rlt_tr(data, method = "vst")  # vst, rlt
+dat.list <- lapply(res, function(x) {
+  lapply(x, function(y) {
+    stats <- y$stats
+    sel <- which(stats$pval <= 0.05)
+    if (length(sel) != 0) {
+      sel <- rownames(stats)[sel]
+      dat <- data.tr[sel]
+      cls <- cls
+      list(dat = dat, cls = cls)
+    } else {
+      NULL
+    }
+  })
+})
+
+dat.list <- do.call("c", dat.list)
+tmp <- gsub("stats\\.", "", names(dat.list))
+tmp <- gsub("\\.", "_", tmp)
+names(dat.list) <- tmp
+```
+
+Call an internal function to perform classification and visualisation by 
+PCA and PLS
+
+```{r }
+cl <- rnaseqdea:::rna_seq_cl(dat.list, 
+  DF = "Comparison", 
+  method = c("randomForest", "svm"),
+  pars = valipars(sampling = "cv", niter = 20, nreps = 3, strat = TRUE)
+)
+```
+
+PCA plot
+
+```{r }
+cl$pca[[1]]
+```
+
+PLS plot
+
+```{r }
+cl$pls[[1]]
+```
+
+Classification comparison
+
+```{r }
+cl$aam.p
+```
+
+classification table
+
+```{r }
+aam <- reshape2::melt(cl$aam)
+aam <- reshape2::dcast(aam, Var1 + L1 ~ Var2, value = "value")
+names(aam)[c(1, 2)] <- c("classifier", "algorithm")
+aam
+```
+
