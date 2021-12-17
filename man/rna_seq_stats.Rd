@@ -22,7 +22,7 @@ a list including stats summary and normalised data set
 Get group stats of normalised RNA-Seq data
 }
 \details{
-The sammary is based on the normalised data, excluding p-values
+The summary is based on the normalised data, excluding p-values
 and their corrections. The p-values are computed by different modelling
 methods such as \code{DEseq2} and \code{edgeR}.
 }

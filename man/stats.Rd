@@ -43,7 +43,7 @@ stats_test(
 
 \item{cls}{a vector for class/group information}
 
-\item{com}{a character string for comparision}
+\item{com}{a character string for comparison}
 
 \item{norm.method}{normalisation method}
 
@@ -54,7 +54,7 @@ stats_test(
 }
 \value{
 a list with contents: \itemize{
-\item stats statiststical summary
+\item stats statistical summary
 \item rej.num p-value rejection
 \item data transposed and normalised data set
 \item cls factor for class information

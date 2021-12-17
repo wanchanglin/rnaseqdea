@@ -19,7 +19,7 @@ norm_factor(
 }
 \value{
 a list with normalisation factor and normalised data if \code{norm.data}
-is TRUE othereise an vector of normalisation factor
+is TRUE otherwise an vector of normalisation factor
 }
 \description{
 Calculate normalisation factor

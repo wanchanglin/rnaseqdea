@@ -9,16 +9,16 @@
 #' 
 #' @param data a data frame with gene x replicate format
 #' @param cls a vector for class/group information
-#' @param com a character string for comparision
+#' @param com a character string for comparison
 #' @param stats.method statistical analysis methods for RNA-Seq 
-#' @param norm.method onormalisation method
+#' @param norm.method normalisation method
 #' @param ep	an integer for plotting ellipse. 1 and 2 for plotting overall
 #'   and group ellipse, respectively. Otherwise, none. This is for PCA and
 #'   MDS plot.
 #' @param ... further parameters to `stats.method`
 #' @return a list with contents: \itemize{
 #'  \item ma.p MA plot
-#'  \item volcano.p ivolcano plot
+#'  \item volcano.p volcano plot
 #'  \item hist.p histogram
 #'  \item data.s normalised data set with highly expressed variables
 #'  \item mad.p MAD plot
@@ -44,7 +44,7 @@
 #'   ## Filter low expression tags
 #'   ## cpms <- edgeR::cpm(data)
 #'   cpms <- t(t(data) / (1e-6 * colSums(data)))
-#'   keep <- rowSums(cpms > 0.5) >= 2            # from edgeR workfow
+#'   keep <- rowSums(cpms > 0.5) >= 2            # from edgeR workflow
 #' }
 #' sum(keep)
 #' data <- data[keep, ]
@@ -249,7 +249,7 @@ rna_seq_dea <- function(data, cls, com, stats.method = "stats_TSPM",
 #' @param nf  normalisation factor
 #' @param method data centre function
 #' @return a list including stats summary and normalised data set
-#' @details The sammary is based on the normalised data, excluding p-values 
+#' @details The summary is based on the normalised data, excluding p-values 
 #'   and their corrections. The p-values are computed by different modelling 
 #'   methods such as `DEseq2` and `edgeR`.
 #' @export  
@@ -296,7 +296,7 @@ rna_seq_stats <- function(mat, grp, nf, method = "mean") {
 #' @param method differential analysis method
 #' @param norm.data a logical indicating whether normalise data or not
 #' @return a list with normalisation factor and normalised data if `norm.data` 
-#'   is TRUE othereise an vector of normalisation factor
+#'   is TRUE otherwise an vector of normalisation factor
 #' @importFrom DESeq2 estimateSizeFactorsForMatrix
 #' @importFrom edgeR calcNormFactors
 #' @export 
@@ -361,7 +361,7 @@ norm_factor <- function(data, method = c("DESeq", "TMM", "RLE", "UQ", "none"),
 ## ------------------------------------------------------------------------
 #' Transform count data
 #' 
-#' Transform count data. The transformaed data can be used in visulaisation 
+#' Transform count data. The transformed data can be used in visualisation 
 #' and classification.
 #' 
 #' @param data a data frame with gene x replicate format
@@ -401,12 +401,12 @@ vst_rlt_tr <- function(data, method = c("vst", "rlt"), ...) {
 #' 
 #' Correct p-value with independent filtering
 #' 
-#' @param pval an vector of p-calues
+#' @param pval an vector of p-values
 #' @param filter.stat  A vector of stage-one filter statistics, or a function
 #'   which is able to compute this vector from data, if data is supplied. See 
 #'   [genefilter::filtered_p()].
 #' @param alpha p-values threshold for selection
-#' @param method p-calue correction method
+#' @param method p-value correction method
 #' @return a list.
 #' @export
 #' @importFrom genefilter filtered_p
@@ -428,7 +428,7 @@ vst_rlt_tr <- function(data, method = c("vst", "rlt"), ...) {
 #' res$rej.num 
 #' head(res$stats)
 #' 
-#' ## independent filtering for adjusted pvalues
+#' ## independent filtering for adjusted p-values
 #' stats <- res$stats
 #' pval <- stats$pval
 #' names(pval) <- rownames(stats)
@@ -476,13 +476,13 @@ p_adj_f <- function(pval, filter.stat, alpha = 0.1, method = "BH") {
 #' 
 #' @param data a data frame with gene x replicate format
 #' @param cls a vector for class/group information
-#' @param com a character string for comparision
+#' @param com a character string for comparison
 #' @param norm.method normalisation method
 #' @param test.method hypothesis testing method for `stats_test`, e.g. 
 #'   [oneway.test()], [kruskal.test()],  [wilcox.test()], [t.test()]. 
 #' @param ... further parameters to be passed into modelling
 #' @return a list with contents: \itemize{
-#'   \item stats statiststical summary
+#'   \item stats statistical summary
 #'   \item rej.num p-value rejection
 #'   \item data transposed and normalised data set
 #'   \item cls factor for class information
@@ -1271,13 +1271,13 @@ stats_test <- function(data, cls, com, norm.method = "TMM",
     return(pval)
   }
 
-  ## call Wilconxon Test
+  ## call hypothesis test
   pval <- sapply(as.data.frame(mat), function(x) {
     .pval(x, grp, test.method = test.method, ...)
   })
   ## wll-01-07-2014: 1. correct should be FLASE;
   ##                 2. p-values can be extracted from stats.
-  ## adjust p-values (BH: Benjamini<U+FFFD>CHochberg. i.e. fdr)
+  ## adjust p-values (BH: Benjamini-Hochberg. i.e. fdr)
   padj <- p.adjust(pval, method = "BH")
 
   ## get the adjusted p-values with filtering
@@ -1306,11 +1306,11 @@ stats_test <- function(data, cls, com, norm.method = "TMM",
 ## ------------------------------------------------------------------------
 #' Wrapper function for assessing feature selection of RNA-Seq data
 #' 
-#' Apply unsupervised and supervised lotting and classification to assess the 
-#' goodness of feture selection for count data.
+#' Apply unsupervised and supervised plotting and classification to assess the 
+#' goodness of feature selection for count data.
 #' 
 #' @param dat.list a list consisting data set and class data
-#' @param DF a setset of plot tittle for PCA and PLS
+#' @param DF a subset of plot tittle for PCA and PLS
 #' @param method classification methods. Only support `randomForest` and `svm`
 #' @param pars sampling setting for classification
 #' @param ep	an integer for plotting ellipse. 1 and 2 for plotting overall

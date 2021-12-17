@@ -19,11 +19,11 @@ rna_seq_dea(
 
 \item{cls}{a vector for class/group information}
 
-\item{com}{a character string for comparision}
+\item{com}{a character string for comparison}
 
 \item{stats.method}{statistical analysis methods for RNA-Seq}
 
-\item{norm.method}{onormalisation method}
+\item{norm.method}{normalisation method}
 
 \item{ep}{an integer for plotting ellipse. 1 and 2 for plotting overall
 and group ellipse, respectively. Otherwise, none. This is for PCA and
@@ -34,7 +34,7 @@ MDS plot.}
 \value{
 a list with contents: \itemize{
 \item ma.p MA plot
-\item volcano.p ivolcano plot
+\item volcano.p volcano plot
 \item hist.p histogram
 \item data.s normalised data set with highly expressed variables
 \item mad.p MAD plot
@@ -60,7 +60,7 @@ if (TRUE) {
   ## Filter low expression tags
   ## cpms <- edgeR::cpm(data)
   cpms <- t(t(data) / (1e-6 * colSums(data)))
-  keep <- rowSums(cpms > 0.5) >= 2            # from edgeR workfow
+  keep <- rowSums(cpms > 0.5) >= 2            # from edgeR workflow
 }
 sum(keep)
 data <- data[keep, ]

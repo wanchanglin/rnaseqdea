@@ -9,14 +9,15 @@ vignette: >
   \usepackage[utf8]{inputenc}
 ---
 
-
 ```{r common, include=F}
 knitr::opts_chunk$set(collapse = FALSE, 
                       messages = FALSE,
                       warning = FALSE,
                       cache = FALSE, 
                       comment = "#>",
-                      fig.width = 7, fig.height = 7, 
+                      dev = "png",
+                      fig.width = 7, 
+                      fig.height = 7, 
                       fig.align = "center")
 pkgs <- c("mt", "lattice", "latticeExtra", "rnaseqdea", "reshape2")
 invisible(lapply(pkgs, library, character.only = TRUE))
@@ -275,8 +276,8 @@ h.p
 
 ## Classification and visualisation by PCA and PLS
 
-Prepare highly expressed data set for classification analysis.
-
+Prepare highly expressed data set for classification analysis. Here use 0.05
+as threshold for p-values.
 
 ```{r }
 ## Transform the raw count data by `vst`

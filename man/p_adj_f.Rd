@@ -7,7 +7,7 @@
 p_adj_f(pval, filter.stat, alpha = 0.1, method = "BH")
 }
 \arguments{
-\item{pval}{an vector of p-calues}
+\item{pval}{an vector of p-values}
 
 \item{filter.stat}{A vector of stage-one filter statistics, or a function
 which is able to compute this vector from data, if data is supplied. See
@@ -15,7 +15,7 @@ which is able to compute this vector from data, if data is supplied. See
 
 \item{alpha}{p-values threshold for selection}
 
-\item{method}{p-calue correction method}
+\item{method}{p-value correction method}
 }
 \value{
 a list.
@@ -42,7 +42,7 @@ names(res)     # "stats", "rej.num", "data", "cls", "padjf"
 res$rej.num 
 head(res$stats)
 
-## independent filtering for adjusted pvalues
+## independent filtering for adjusted p-values
 stats <- res$stats
 pval <- stats$pval
 names(pval) <- rownames(stats)

@@ -17,7 +17,7 @@ vst_rlt_tr(data, method = c("vst", "rlt"), ...)
 normalised data
 }
 \description{
-Transform count data. The transformaed data can be used in visulaisation
+Transform count data. The transformed data can be used in visualisation
 and classification.
 }
 \examples{
