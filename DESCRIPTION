@@ -2,7 +2,7 @@ Package: rnaseqdea
 Title: RNA-Seq Differential Expression Analysis (rnaseqdea)
 Date: 2021-12-09
 Type: Package
-Version: 0.1.1
+Version: 0.1.2
 Author: Wanchang Lin
 Maintainer: Wanchang Lin <wanchanglin@hotmail.com>
 Description: 
