@@ -44,6 +44,12 @@ This package is only in GitHub. To install, use:
 devtools::install_github("wanchanglin/rnaseqdea")
 ```
 
+Or install with vignette:
+```r
+devtools::install_github('wanchanglin/rnaseqdea', build_vignettes = TRUE)
+browseVignettes("rnaseqdea")
+```
+
 ## Usage ##
 
 See the help pages of the package for details.
