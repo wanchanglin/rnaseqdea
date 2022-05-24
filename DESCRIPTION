@@ -6,7 +6,7 @@ Version: 0.1.2
 Author: Wanchang Lin
 Maintainer: Wanchang Lin <wanchanglin@hotmail.com>
 Description: 
-  Functions for RNA-Seq differential experssion analysis, including: wrapper
+  Functions for RNA-Seq differential expression analysis, including: wrapper
   function to different statistical models, normalisation methods, plotting
   and classification.  
 License: GPL (>= 2)
